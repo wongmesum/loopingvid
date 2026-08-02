@@ -1,0 +1,27 @@
+name: loopingvid
+description: >
+  A Flutter application for video looping, audio mastering, video composition/editing,
+  job history management, and 24/7 RTMP live streaming with infinite seamless repeat.
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
