@@ -236,7 +236,7 @@ class _LoopScreenState extends State<LoopScreen> {
                 labelText: 'Quality Preset',
                 border: OutlineInputBorder(),
               ),
-              value: _quality,
+              initialValue: _quality,
               items: _qualityPresets
                   .map((q) => DropdownMenuItem(value: q, child: Text(q)))
                   .toList(),

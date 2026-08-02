@@ -349,7 +349,7 @@ class _MasteringScreenState extends State<MasteringScreen> {
                 labelText: 'Format',
                 border: OutlineInputBorder(),
               ),
-              value: _outputFormat,
+              initialValue: _outputFormat,
               items: _outputFormats
                   .map((f) => DropdownMenuItem(value: f, child: Text(f)))
                   .toList(),

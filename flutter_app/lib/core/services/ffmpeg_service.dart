@@ -312,7 +312,7 @@ class FFmpegService {
         onComplete?.call();
       } else {
         final logs = await session.getLogsAsString();
-        onError?.call(logs ?? 'Unknown streaming error');
+        onError?.call(logs.isEmpty ? 'Unknown streaming error' : logs);
       }
     });
 

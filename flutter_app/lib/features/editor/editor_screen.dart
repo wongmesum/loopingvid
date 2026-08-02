@@ -331,7 +331,7 @@ class _EditorScreenState extends State<EditorScreen> {
             labelText: 'Output Quality',
             border: OutlineInputBorder(),
           ),
-          value: _quality,
+          initialValue: _quality,
           items: _qualityPresets
               .map((q) => DropdownMenuItem(value: q, child: Text(q)))
               .toList(),
