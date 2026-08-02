@@ -16,12 +16,12 @@ class AppRouter extends StatefulWidget {
 class _AppRouterState extends State<AppRouter> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    LoopScreen(),
-    MasteringScreen(),
-    EditorScreen(),
-    LiveScreen(),
-    HistoryScreen(),
+  final List<Widget> _screens = [
+    const LoopScreen(),
+    const MasteringScreen(),
+    const EditorScreen(),
+    const LiveScreen(),
+    const HistoryScreen(),
   ];
 
   @override
