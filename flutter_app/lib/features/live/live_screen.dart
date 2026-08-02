@@ -7,6 +7,7 @@ import 'package:loopingvid/core/services/ffmpeg_service.dart';
 import 'package:loopingvid/core/services/settings_service.dart';
 import 'package:loopingvid/core/database/database_helper.dart';
 import 'package:loopingvid/core/database/models.dart';
+import 'package:loopingvid/core/utils/responsive.dart';
 
 enum StreamPlatform { youtube, tiktok, customRtmp }
 
@@ -89,20 +90,21 @@ class _LiveScreenState extends State<LiveScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: r.screenPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_status == StreamStatus.live) _buildLiveBanner(),
           if (_status == StreamStatus.error) _buildErrorBanner(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildPlatformCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildStreamConfigCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildMediaSourceCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildTelemetryCard(),
           const SizedBox(height: 24),
           _buildActionButton(),
@@ -112,10 +114,11 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Widget _buildLiveBanner() {
+    final r = context.responsive;
     return Card(
       color: Colors.red.shade50,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Row(
           children: [
             Container(
@@ -170,9 +173,10 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Widget _buildPlatformCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -212,9 +216,10 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Widget _buildStreamConfigCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -279,9 +284,10 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Widget _buildMediaSourceCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -308,11 +314,12 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Widget _buildTelemetryCard() {
+    final r = context.responsive;
     if (_status != StreamStatus.live) return const SizedBox.shrink();
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -351,32 +358,42 @@ class _LiveScreenState extends State<LiveScreen> {
   }
 
   Widget _buildActionButton() {
+    final r = context.responsive;
     if (_status == StreamStatus.live) {
-      return FilledButton.icon(
-        onPressed: _stopStream,
-        icon: const Icon(Icons.stop),
-        label: const Text('Stop Stream'),
-        style: FilledButton.styleFrom(backgroundColor: Colors.red),
+      return SizedBox(
+        height: r.buttonHeight,
+        child: FilledButton.icon(
+          onPressed: _stopStream,
+          icon: const Icon(Icons.stop),
+          label: const Text('Stop Stream'),
+          style: FilledButton.styleFrom(backgroundColor: Colors.red),
+        ),
       );
     }
 
     if (_status == StreamStatus.connecting) {
-      return FilledButton.icon(
-        onPressed: null,
-        icon: const SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-              strokeWidth: 2, color: Colors.white),
+      return SizedBox(
+        height: r.buttonHeight,
+        child: FilledButton.icon(
+          onPressed: null,
+          icon: const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: Colors.white),
+          ),
+          label: const Text('Connecting...'),
         ),
-        label: const Text('Connecting...'),
       );
     }
 
-    return FilledButton.icon(
-      onPressed: _canGoLive() ? _startStream : null,
-      icon: const Icon(Icons.live_tv),
-      label: const Text('Go Live'),
+    return SizedBox(
+      height: r.buttonHeight,
+      child: FilledButton.icon(
+        onPressed: _canGoLive() ? _startStream : null,
+        icon: const Icon(Icons.live_tv),
+        label: const Text('Go Live'),
+      ),
     );
   }
 

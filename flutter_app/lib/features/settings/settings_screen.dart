@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:loopingvid/core/services/settings_service.dart';
 import 'package:loopingvid/core/services/file_picker_service.dart';
 import 'package:loopingvid/core/database/database_helper.dart';
+import 'package:loopingvid/core/utils/responsive.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -50,6 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Settings')),
@@ -60,23 +62,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: r.screenPadding,
         children: [
           _buildSectionHeader('Storage'),
           _buildStorageCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildSectionHeader('Preview'),
           _buildPreviewCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildSectionHeader('Cloud Sync'),
           _buildCloudCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildSectionHeader('API Keys'),
           _buildApiKeysCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildSectionHeader('Data Management'),
           _buildDataCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildSectionHeader('About'),
           _buildAboutCard(),
         ],
@@ -156,9 +158,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildApiKeysCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           children: [
             TextField(

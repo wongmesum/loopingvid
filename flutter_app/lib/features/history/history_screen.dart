@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:loopingvid/core/database/database_helper.dart';
 import 'package:loopingvid/core/database/models.dart';
+import 'package:loopingvid/core/utils/responsive.dart';
 
 enum HistoryFilter { all, renders, liveStreams }
 
@@ -41,11 +42,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
     return Column(
       children: [
         // Filter Chips
         Padding(
-          padding: const EdgeInsets.all(16),
+          padding: r.screenPadding,
           child: SegmentedButton<HistoryFilter>(
             segments: [
               ButtonSegment(
@@ -102,7 +104,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
     return ListView.builder(
       itemCount: items.length,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: context.responsive.horizontalPadding),
       itemBuilder: (context, index) => items[index],
     );
   }
