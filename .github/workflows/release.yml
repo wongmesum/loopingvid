@@ -143,23 +143,25 @@ jobs:
           EOF
           echo "key.properties created"
 
-      # === GENERATE GRADLE WRAPPER (if jar missing) ===
+      # === VALIDATE GRADLE WRAPPER ===
 
-      - name: Ensure Gradle Wrapper is complete
+      - name: Validate Gradle Wrapper is complete
         working-directory: flutter_app/android
         run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Generating Gradle Wrapper via Flutter..."
-            cd ..
-            flutter build apk --debug 2>/dev/null || true
-            cd android
-            if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-              echo "Wrapper still missing, generating from Gradle..."
-              gradle wrapper --gradle-version=8.3 || true
+          echo "Checking required Gradle Wrapper files..."
+          MISSING=""
+          for f in gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties; do
+            if [ ! -f "$f" ]; then
+              MISSING="$MISSING $f"
             fi
+          done
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing required Gradle Wrapper files:$MISSING"
+            echo "Run 'flutter create --platforms=android .' to regenerate the Android platform."
+            exit 1
           fi
-          echo "Gradle Wrapper status:"
-          ls -la gradlew gradle/wrapper/gradle-wrapper.jar 2>/dev/null || echo "WARNING: wrapper files may be generated during build"
+          echo "All Gradle Wrapper files present:"
+          ls -la gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
 
       # === BUILD RELEASE APK ===
 
