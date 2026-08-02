@@ -1,0 +1,6 @@
+{
+  "name": "LoopingVid",
+  "description": "Mobile video looping, audio mastering, video editor, job history, and live streaming tool.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

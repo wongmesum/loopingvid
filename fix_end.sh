@@ -1,0 +1,3 @@
+sed -i '/\/\/ Extension function/d' app/src/main/java/com/example/ui/navigation/MainScreen.kt
+
+sed -i 's/        }    }/        }\n        com.example.core.ui.ExportDialog(\n            showDialog = exportState.showDialog,\n            onDismiss = { exportViewModel.dismissDialog() },\n            onConfirm = { fileName, format, dest ->\n                exportViewModel.updateFileName(fileName)\n                exportViewModel.selectFormat(format)\n                exportViewModel.selectDestination(dest)\n                exportViewModel.confirmExport()\n            },\n            defaultFileName = exportState.fileName,\n            availableFormats = exportState.availableFormats\n        )\n    }/g' app/src/main/java/com/example/ui/navigation/MainScreen.kt
