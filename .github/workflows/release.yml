@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.extract.outputs.version }}
+      tag: ${{ steps.extract.outputs.tag }}
     steps:
       - name: Extract and validate version
         id: extract
@@ -47,7 +48,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME}"
           if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
-            echo "::error::Release for tag '$TAG' already exists"
+            echo "::error::Release for tag '$TAG' already exists. Cannot publish duplicate."
             exit 1
           fi
 
@@ -55,8 +56,6 @@ jobs:
     name: Build Signed APK
     runs-on: ubuntu-latest
     needs: validate
-    outputs:
-      apk_name: ${{ steps.rename.outputs.apk_name }}
     defaults:
       run:
         working-directory: flutter_app
@@ -77,7 +76,12 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Install dependencies
+      - name: Verify Flutter installation
+        run: flutter --version
+
+      # === QUALITY GATES ===
+
+      - name: Install dependencies (locked)
         run: flutter pub get
 
       - name: Run lint/analyze
@@ -86,12 +90,44 @@ jobs:
       - name: Run tests
         run: flutter test
 
-      - name: Decode keystore
+      # === VALIDATE SECRETS BEFORE SIGNING ===
+
+      - name: Validate signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          MISSING=""
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then MISSING="$MISSING ANDROID_KEYSTORE_BASE64"; fi
+          if [ -z "$ANDROID_KEY_ALIAS" ]; then MISSING="$MISSING ANDROID_KEY_ALIAS"; fi
+          if [ -z "$ANDROID_KEYSTORE_PASSWORD" ]; then MISSING="$MISSING ANDROID_KEYSTORE_PASSWORD"; fi
+          if [ -z "$ANDROID_KEY_PASSWORD" ]; then MISSING="$MISSING ANDROID_KEY_PASSWORD"; fi
+
+          if [ -n "$MISSING" ]; then
+            echo "::error::Missing required GitHub Secrets:$MISSING"
+            echo "Please configure these secrets in Settings > Secrets > Actions"
+            exit 1
+          fi
+          echo "All 4 signing secrets present"
+
+      # === DECODE KEYSTORE & SIGN ===
+
+      - name: Decode keystore from secret
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release-keystore.jks
-          echo "Keystore decoded successfully"
+          # Validate it's a real keystore file (PKCS12 or JKS magic bytes)
+          FILE_TYPE=$(file android/app/release-keystore.jks)
+          if echo "$FILE_TYPE" | grep -qiE "java keystore|data"; then
+            echo "Keystore decoded and validated"
+          else
+            echo "::error::Decoded file does not appear to be a valid keystore"
+            rm -f android/app/release-keystore.jks
+            exit 1
+          fi
 
       - name: Create key.properties
         env:
@@ -99,16 +135,68 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          cat > android/key.properties << PROPS
+          cat > android/key.properties << EOF
           storeFile=app/release-keystore.jks
           storePassword=$ANDROID_KEYSTORE_PASSWORD
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
-          PROPS
+          EOF
           echo "key.properties created"
+
+      # === GENERATE GRADLE WRAPPER (if jar missing) ===
+
+      - name: Ensure Gradle Wrapper is complete
+        working-directory: flutter_app/android
+        run: |
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "Generating Gradle Wrapper via Flutter..."
+            cd ..
+            flutter build apk --debug 2>/dev/null || true
+            cd android
+            if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
+              echo "Wrapper still missing, generating from Gradle..."
+              gradle wrapper --gradle-version=8.3 || true
+            fi
+          fi
+          echo "Gradle Wrapper status:"
+          ls -la gradlew gradle/wrapper/gradle-wrapper.jar 2>/dev/null || echo "WARNING: wrapper files may be generated during build"
+
+      # === BUILD RELEASE APK ===
 
       - name: Build release APK
         run: flutter build apk --release
+
+      # === VERIFY APK EXISTS ===
+
+      - name: Verify APK output exists
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::APK not found at expected path: $APK_PATH"
+            echo "Contents of build/app/outputs/:"
+            find build/app/outputs/ -name "*.apk" 2>/dev/null || echo "No APK files found"
+            exit 1
+          fi
+          echo "APK found: $(ls -lh $APK_PATH | awk '{print $5, $NF}')"
+
+      # === VERIFY APK SIGNATURE ===
+
+      - name: Verify APK signature
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          # apksigner is in Android SDK build-tools
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -1)
+          if [ -n "$APKSIGNER" ]; then
+            echo "Using apksigner: $APKSIGNER"
+            $APKSIGNER verify --verbose "$APK_PATH" && echo "APK signature VALID" || {
+              echo "::error::APK signature verification FAILED"
+              exit 1
+            }
+          else
+            echo "::warning::apksigner not found, skipping signature verification"
+          fi
+
+      # === RENAME & UPLOAD ===
 
       - name: Rename APK
         id: rename
@@ -117,21 +205,25 @@ jobs:
           APK_NAME="loopingvid-${VERSION}.apk"
           cp build/app/outputs/flutter-apk/app-release.apk "../${APK_NAME}"
           echo "apk_name=${APK_NAME}" >> "$GITHUB_OUTPUT"
-          echo "Renamed to: ${APK_NAME}"
-          ls -lh "../${APK_NAME}"
+          echo "apk_path=loopingvid-${VERSION}.apk" >> "$GITHUB_OUTPUT"
+          echo "Renamed to: ${APK_NAME} ($(ls -lh ../${APK_NAME} | awk '{print $5}'))"
+
+      # === CLEAN UP SECRETS ===
 
       - name: Clean up signing files
         if: always()
         run: |
           rm -f android/app/release-keystore.jks
           rm -f android/key.properties
-          echo "Signing files removed"
+          echo "Signing files securely removed"
+
+      # === UPLOAD ARTIFACT ===
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: loopingvid-release
-          path: ${{ needs.validate.outputs.version && format('loopingvid-{0}.apk', needs.validate.outputs.version) || 'flutter_app/build/app/outputs/flutter-apk/app-release.apk' }}
+          path: loopingvid-${{ needs.validate.outputs.version }}.apk
           retention-days: 7
           if-no-files-found: error
 
@@ -150,6 +242,16 @@ jobs:
         with:
           name: loopingvid-release
 
+      - name: Verify downloaded APK
+        run: |
+          APK_NAME="loopingvid-${{ needs.validate.outputs.version }}.apk"
+          if [ ! -f "$APK_NAME" ]; then
+            echo "::error::Downloaded APK '$APK_NAME' not found"
+            ls -la *.apk 2>/dev/null || echo "No APK files in directory"
+            exit 1
+          fi
+          echo "APK ready for release: $(ls -lh $APK_NAME | awk '{print $5, $NF}')"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -157,7 +259,9 @@ jobs:
           VERSION="${{ needs.validate.outputs.version }}"
           APK_NAME="loopingvid-${VERSION}.apk"
 
-          gh release create "$GITHUB_REF_NAME" \
+          gh release create "${{ needs.validate.outputs.tag }}" \
             "${APK_NAME}" \
             --title "LoopingVid v${VERSION}" \
             --generate-notes
+
+          echo "Release published: https://github.com/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.tag }}"
