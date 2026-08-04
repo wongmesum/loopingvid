@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import 'package:ffmpeg_kit_flutter_full_gpl/statistics.dart';
+import 'package:ffmpeg_kit_flutter_new/statistics.dart';
 import 'package:loopingvid/core/services/file_picker_service.dart';
 import 'package:loopingvid/core/services/ffmpeg_service.dart';
 import 'package:loopingvid/core/services/settings_service.dart';

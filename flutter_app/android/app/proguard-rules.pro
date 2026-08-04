@@ -4,9 +4,9 @@
 -dontwarn io.flutter.embedding.**
 
 # FFmpeg Kit
--keep class com.arthenica.ffmpegkit.** { *; }
--keep class com.arthenica.smartexception.** { *; }
--dontwarn com.arthenica.**
+-keep class com.antonkarpenko.ffmpegkit.** { *; }
+-keep class com.antonkarpenko.smartexception.** { *; }
+-dontwarn com.antonkarpenko.**
 
 # Video Player / ExoPlayer / Media3
 -keep class com.google.android.exoplayer2.** { *; }

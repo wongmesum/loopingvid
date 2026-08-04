@@ -67,6 +67,30 @@ jobs:
       - name: Build APK (release)
         run: flutter build apk --release
 
+      - name: Verify APK output exists
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "::error::APK not found at expected path: $APK_PATH"
+            find build -name "*.apk" 2>/dev/null || true
+            exit 1
+          fi
+          echo "APK found: $(ls -lh $APK_PATH | awk '{print $5, $NF}')"
+
+      - name: Verify APK signature
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -V | tail -1)
+          if [ -n "$APKSIGNER" ]; then
+            echo "Using apksigner: $APKSIGNER"
+            $APKSIGNER verify --verbose --print-certs "$APK_PATH" && echo "APK signature VALID" || {
+              echo "::error::APK signature verification FAILED"
+              exit 1
+            }
+          else
+            echo "::warning::apksigner not found, skipping signature verification"
+          fi
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
