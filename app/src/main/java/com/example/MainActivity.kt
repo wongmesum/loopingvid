@@ -9,6 +9,7 @@ import com.example.core.database.AppDatabase
 import com.example.core.database.FirestoreJobHistorySyncManager
 import com.example.core.database.LoopingVidRepository
 import com.example.core.ffmpeg.MediaProcessor
+import com.example.core.ffmpeg.VisualizerProcessor
 import com.example.feature.editor.EditorViewModel
 import com.example.feature.history.HistoryViewModel
 import com.example.feature.live.LiveViewModel
@@ -67,7 +68,8 @@ class MainActivity : ComponentActivity() {
         val settingsViewModel = SettingsViewModel(repository)
         val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
         val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
-        val visualizerViewModel = VisualizerViewModel(applicationContext)
+        val visualizerProcessor = VisualizerProcessor(applicationContext, repository)
+        val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor)
         val exportViewModel = com.example.core.ui.ExportViewModel(mediaProcessor)
         val exportQueueViewModel = com.example.core.work.ExportQueueViewModel(application)
 

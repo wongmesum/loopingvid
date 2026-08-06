@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.ffmpeg.JobProgressState
+import com.example.core.ffmpeg.VisualizerProcessor
+import com.example.core.ffmpeg.VisualizerRenderRequest
 import com.example.core.media.Media3SpectrumAudioProcessor
+import kotlinx.coroutines.CancellationException
 import com.example.feature.visualizer.beat.BeatDetectionConfig
 import com.example.feature.visualizer.beat.BeatDetectionEngine
 import com.example.feature.visualizer.beat.BeatEffect
@@ -30,9 +34,9 @@ data class VisualizerUiState(
     val rmsEnergy: Float = 0f,
     val dominantFreqHz: Int = 0,
     val beatSync: BeatSyncState = BeatSyncState(),
-    val isExporting: Boolean = false,
-    val exportProgress: Int = 0,
-    val exportStatus: String = ""
+    val outputName: String = "",
+    val jobProgress: JobProgressState = JobProgressState(),
+    val validationMessage: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -46,9 +50,9 @@ data class VisualizerUiState(
             rmsEnergy == other.rmsEnergy &&
             dominantFreqHz == other.dominantFreqHz &&
             beatSync == other.beatSync &&
-            isExporting == other.isExporting &&
-            exportProgress == other.exportProgress &&
-            exportStatus == other.exportStatus
+            outputName == other.outputName &&
+            jobProgress == other.jobProgress &&
+            validationMessage == other.validationMessage
     }
 
     override fun hashCode(): Int {
@@ -58,6 +62,9 @@ data class VisualizerUiState(
         result = 31 * result + isPlaying.hashCode()
         return result
     }
+
+    val canExport: Boolean
+        get() = audioUri != null && !jobProgress.isProcessing
 }
 
 /**
@@ -66,7 +73,8 @@ data class VisualizerUiState(
  * [VisualizerRenderConfig] state tree.
  */
 class VisualizerViewModel(
-    private val appContext: Context? = null
+    private val appContext: Context? = null,
+    private val visualizerProcessor: VisualizerProcessor? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VisualizerUiState())
@@ -77,6 +85,14 @@ class VisualizerViewModel(
     private var decodedDurationMs: Long = 0L
 
     init {
+        visualizerProcessor?.let { processor ->
+            viewModelScope.launch {
+                processor.progressState.collect { progress ->
+                    _uiState.update { it.copy(jobProgress = progress) }
+                }
+            }
+        }
+
         spectrumProcessor.onSpectrumDataListener = { magnitudes, peakDb, rms ->
             _uiState.update {
                 it.copy(
@@ -360,6 +376,62 @@ class VisualizerViewModel(
 
     fun setSafeAreaOverlay(overlay: String?) {
         updateConfig { it.copy(safeAreaOverlay = overlay) }
+    }
+
+    // --- Export ---
+
+    fun setOutputName(name: String) {
+        _uiState.update { it.copy(outputName = name, validationMessage = null) }
+    }
+
+    fun dismissValidationMessage() {
+        _uiState.update { it.copy(validationMessage = null) }
+    }
+
+    /**
+     * Renders the current config to an MP4. Beat markers are forwarded so the
+     * exported video pulses on the same beats the preview does.
+     */
+    fun exportVisualizer() {
+        val state = _uiState.value
+        val audioUri = state.audioUri
+        if (audioUri.isNullOrBlank()) {
+            _uiState.update { it.copy(validationMessage = "Pilih audio sumber terlebih dahulu.") }
+            return
+        }
+        val processor = visualizerProcessor
+        if (processor == null) {
+            _uiState.update { it.copy(validationMessage = "Mesin render belum siap.") }
+            return
+        }
+        if (state.jobProgress.isProcessing) return
+
+        viewModelScope.launch {
+            try {
+                processor.renderVisualizer(
+                    VisualizerRenderRequest(
+                        audioUri = audioUri,
+                        config = state.config,
+                        beatMarkersMs = state.beatSync.markersMs,
+                        // The builder skips its beat pulse unless an expression is
+                        // present; the pulse shape itself lives in the builder.
+                        beatEffectExpression = state.beatSync.selectedEffect.name.takeIf {
+                            state.beatSync.markersMs.isNotEmpty()
+                        },
+                        durationMs = state.beatSync.durationMs,
+                        outputName = state.outputName
+                    )
+                )
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // Failure is surfaced through visualizerProcessor.progressState.
+            }
+        }
+    }
+
+    fun cancelExport() {
+        visualizerProcessor?.cancel()
     }
 
     // --- Helpers ---

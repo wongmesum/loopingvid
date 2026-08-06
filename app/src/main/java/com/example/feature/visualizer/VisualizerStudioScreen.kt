@@ -89,6 +89,17 @@ fun VisualizerStudioScreen(
                 onEffectChange = viewModel::setSelectedBeatEffect
             )
         }
+
+        VisualizerExportCard(
+            outputName = uiState.outputName,
+            canExport = uiState.canExport,
+            jobProgress = uiState.jobProgress,
+            validationMessage = uiState.validationMessage,
+            onOutputNameChange = viewModel::setOutputName,
+            onExport = viewModel::exportVisualizer,
+            onCancel = viewModel::cancelExport,
+            onDismissValidation = viewModel::dismissValidationMessage
+        )
     }
 }
 
