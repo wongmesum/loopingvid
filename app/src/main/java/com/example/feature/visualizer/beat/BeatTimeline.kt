@@ -72,6 +72,7 @@ fun BeatTimeline(
             }
         )
 
+        val outlineColor = MaterialTheme.colorScheme.outline
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
@@ -107,7 +108,7 @@ fun BeatTimeline(
         ) {
             val centerY = size.height / 2f
             drawLine(
-                color = MaterialTheme.colorScheme.outline,
+                color = outlineColor,
                 start = Offset(0f, centerY),
                 end = Offset(size.width, centerY),
                 strokeWidth = 2f
