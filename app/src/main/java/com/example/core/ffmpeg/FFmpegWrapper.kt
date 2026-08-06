@@ -375,4 +375,123 @@ object FFmpegCommandBuilder {
         )
         return commands
     }
+
+    /**
+     * Builds a real FFmpeg command that renders a sequence of still images into a
+     * video file (Slideshow). Each image becomes a looped input held for
+     * [perImageDurationSec]; consecutive images are joined either with an `xfade`
+     * transition or, when [transition] is "none", a hard-cut `concat`. An optional
+     * background audio track is muxed in and trimmed to the video length.
+     */
+    fun buildSlideshowCommand(
+        imagePaths: List<String>,
+        outputPath: String,
+        perImageDurationSec: Double,
+        transition: String = "fade",
+        transitionDurationSec: Double = 1.0,
+        audioPath: String? = null,
+        resolution: String = "1080p",
+        aspectRatio: String = "16:9",
+        frameRate: String = "30fps"
+    ): List<String> {
+        require(imagePaths.isNotEmpty()) { "Slideshow requires at least one image" }
+
+        val longSide = when (resolution) {
+            "4K" -> 3840
+            "1080p" -> 1920
+            "720p" -> 1280
+            "480p" -> 854
+            else -> 1920
+        }
+        val (canvasWidth, canvasHeight) = when (aspectRatio) {
+            "16:9" -> longSide to (longSide * 9 / 16)
+            "9:16" -> (longSide * 9 / 16) to longSide
+            "1:1" -> longSide to longSide
+            "4:5" -> (longSide * 4 / 5) to longSide
+            else -> longSide to (longSide * 9 / 16)
+        }
+
+        val args = mutableListOf<String>()
+        val durationStr = String.format(java.util.Locale.US, "%.3f", perImageDurationSec)
+
+        imagePaths.forEach { path ->
+            args.add("-loop"); args.add("1")
+            args.add("-t"); args.add(durationStr)
+            args.add("-i"); args.add(path)
+        }
+
+        val hasAudio = !audioPath.isNullOrBlank()
+        if (hasAudio) {
+            args.add("-i")
+            args.add(audioPath!!)
+        }
+
+        val fps = frameRate.replace("fps", "").ifBlank { "30" }
+        val scaleFilter = "scale=w=$canvasWidth:h=$canvasHeight:force_original_aspect_ratio=decrease," +
+            "pad=$canvasWidth:$canvasHeight:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=$fps"
+
+        val scaledLabels = imagePaths.indices.map { i -> "v$i" }
+        val scaleChain = imagePaths.indices.joinToString(";") { i -> "[$i:v]$scaleFilter[${scaledLabels[i]}]" }
+
+        val noTransition = imagePaths.size == 1 || transition.isBlank() || transition.equals("none", ignoreCase = true)
+        val (filterGraph, finalVideoLabel) = if (noTransition) {
+            buildConcatGraph(scaleChain, scaledLabels)
+        } else {
+            buildXfadeGraph(scaleChain, scaledLabels, perImageDurationSec, transition, transitionDurationSec)
+        }
+
+        args.add("-filter_complex")
+        args.add(filterGraph)
+        args.add("-map")
+        args.add("[$finalVideoLabel]")
+
+        if (hasAudio) {
+            args.add("-map")
+            args.add("${imagePaths.size}:a")
+            args.add("-c:a")
+            args.add("aac")
+            args.add("-b:a")
+            args.add("192k")
+            args.add("-shortest")
+        } else {
+            args.add("-an")
+        }
+
+        args.addAll(listOf("-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"))
+        args.add("-y")
+        args.add(outputPath)
+
+        return args
+    }
+
+    private fun buildConcatGraph(scaleChain: String, scaledLabels: List<String>): Pair<String, String> {
+        if (scaledLabels.size == 1) return scaleChain to scaledLabels[0]
+        val concatInputs = scaledLabels.joinToString("") { "[$it]" }
+        val graph = "$scaleChain;${concatInputs}concat=n=${scaledLabels.size}:v=1:a=0[outv]"
+        return graph to "outv"
+    }
+
+    private fun buildXfadeGraph(
+        scaleChain: String,
+        scaledLabels: List<String>,
+        perImageDurationSec: Double,
+        transition: String,
+        transitionDurationSec: Double
+    ): Pair<String, String> {
+        val xfadeChain = StringBuilder()
+        var prevLabel = scaledLabels[0]
+        var cumulativeOffset = perImageDurationSec - transitionDurationSec
+        for (i in 1 until scaledLabels.size) {
+            val nextLabel = scaledLabels[i]
+            val outLabel = "x$i"
+            val offsetStr = String.format(java.util.Locale.US, "%.3f", cumulativeOffset.coerceAtLeast(0.0))
+            val durationStr = String.format(java.util.Locale.US, "%.3f", transitionDurationSec)
+            xfadeChain.append(
+                ";[$prevLabel][$nextLabel]xfade=transition=$transition:duration=$durationStr:offset=$offsetStr[$outLabel]"
+            )
+            prevLabel = outLabel
+            cumulativeOffset += perImageDurationSec - transitionDurationSec
+        }
+        return "$scaleChain$xfadeChain" to prevLabel
+    }
 }

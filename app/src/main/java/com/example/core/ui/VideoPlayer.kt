@@ -64,6 +64,7 @@ fun VideoPlayer(
     endMs: Long = 0L,
     colorMatrix: androidx.compose.ui.graphics.ColorMatrix? = null,
     resizeMode: Int = AspectRatioFrameLayout.RESIZE_MODE_FIT,
+    audioProcessor: androidx.media3.common.audio.AudioProcessor? = null,
     onPlaybackStateChanged: ((isPlaying: Boolean) -> Unit)? = null,
     onProgressUpdate: ((positionMs: Long, durationMs: Long) -> Unit)? = null,
     onError: ((String) -> Unit)? = null,
@@ -80,11 +81,30 @@ fun VideoPlayer(
         return
     }
 
-    val exoPlayer = remember(context) {
-        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context)
-            .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
-            .setEnableDecoderFallback(true)
-            
+    // Rebuild the player when the audio processor changes so the PCM tap is
+    // actually installed in the audio pipeline (processors are fixed at build time).
+    val exoPlayer = remember(context, audioProcessor) {
+        val renderersFactory = if (audioProcessor != null) {
+            object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+                override fun buildAudioSink(
+                    context: android.content.Context,
+                    enableFloatOutput: Boolean,
+                    enableAudioTrackPlaybackParams: Boolean
+                ): androidx.media3.exoplayer.audio.AudioSink {
+                    return androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                        .setEnableFloatOutput(enableFloatOutput)
+                        .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                        .setAudioProcessors(arrayOf(audioProcessor))
+                        .build()
+                }
+            }.setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+        } else {
+            androidx.media3.exoplayer.DefaultRenderersFactory(context)
+                .setExtensionRendererMode(androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+                .setEnableDecoderFallback(true)
+        }
+
         ExoPlayer.Builder(context, renderersFactory).build().apply {
             repeatMode = if (isLooping) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
             playWhenReady = isPlaying

@@ -2,43 +2,80 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// --- Elegant Dark Palette (Deep Charcoal with Subtle Gold & Purple Accents) ---
+// --- Professional Creator Studio Premium Dark Palette ---
 
-// Deep Charcoal Canvas & Surface Shades
-val CharcoalBackground = Color(0xFF121214) // Deep charcoal base canvas
-val CharcoalSurface = Color(0xFF1A1A1E)    // Elevated surface card background
-val CharcoalSurfaceVariant = Color(0xFF23232A) // Surface variant / navigation bar background
-val CharcoalSurfaceHigh = Color(0xFF2C2C36) // High elevation container / dialog surface
+// Core Surfaces
+val ProBackground = Color(0xFF0B0D12)       // Deepest background
+val ProSurface = Color(0xFF131720)          // Card/sheet surface
+val ProSurfaceElevated = Color(0xFF1A202C)  // Elevated dialogs, modals
+val ProSurfaceHigh = Color(0xFF222A38)      // High-elevation containers
 
-// Subtle Gold Accents
-val ElegantGold = Color(0xFFE5C158) // Warm subtle gold primary
-val ElegantGoldDim = Color(0xFFC5A23C) // Muted gold for dim states
-val ElegantGoldContainer = Color(0xFF3B3114) // Dark gold container background
-val OnElegantGoldContainer = Color(0xFFFBEBB5) // Light gold text on container
-val GoldAccent = Color(0xFFFFD700) // Vibrant gold highlight
+// Primary Accent (Purple)
+val ProPrimary = Color(0xFF7C5CFF)          // Main action/brand color
+val ProPrimaryDim = Color(0xFF5B3FCC)       // Pressed/dimmed primary
+val ProPrimaryContainer = Color(0xFF2A1F5C) // Container behind primary content
+val ProOnPrimaryContainer = Color(0xFFE0D6FF) // Text on primary container
 
-// Refined Purple / Lavender Accents
-val RoyalPurple = Color(0xFFD0BCFF) // Elegant purple accent
-val RoyalPurpleContainer = Color(0xFF381E72) // Deep purple container
-val OnRoyalPurpleContainer = Color(0xFFEADDFF)
+// Secondary Accent (Cyan)
+val ProSecondary = Color(0xFF22D3EE)        // Supporting accent
+val ProSecondaryDim = Color(0xFF1AA3B8)     // Dimmed secondary
+val ProSecondaryContainer = Color(0xFF0F3D45) // Container behind secondary
+val ProOnSecondaryContainer = Color(0xFFCCF7FE) // Text on secondary container
+
+// Status / Semantic
+val ProSuccess = Color(0xFF34D399)          // Render complete, success
+val ProLive = Color(0xFFFF4D67)             // Live indicator, error, destructive
+val ProWarning = Color(0xFFFBBF24)          // Caution, near-clip
+
+// Text & Content
+val ProTextPrimary = Color(0xFFF1F3F9)      // High-contrast titles, body
+val ProTextSecondary = Color(0xFF8B95A8)    // Muted/secondary text
+val ProTextTertiary = Color(0xFF5A6478)     // Placeholder, disabled
+
+// Outline & Divider
+val ProOutline = Color(0xFF2A3342)          // Card borders, dividers
+val ProOutlineVariant = Color(0xFF3A4556)   // Subtle accent borders
+
+// ============================================================
+// BACKWARD COMPATIBILITY ALIASES
+// Existing screens reference these. DO NOT REMOVE.
+// ============================================================
+
+// Deep Charcoal Canvas & Surface Shades (old palette remapped)
+val CharcoalBackground = ProBackground
+val CharcoalSurface = ProSurface
+val CharcoalSurfaceVariant = ProSurfaceElevated
+val CharcoalSurfaceHigh = ProSurfaceHigh
+
+// Subtle Gold → now maps to secondary cyan (closest warm-accent replacement)
+val ElegantGold = ProSecondary
+val ElegantGoldDim = ProSecondaryDim
+val ElegantGoldContainer = ProSecondaryContainer
+val OnElegantGoldContainer = ProOnSecondaryContainer
+val GoldAccent = ProWarning
+
+// Refined Purple / Lavender
+val RoyalPurple = ProPrimary
+val RoyalPurpleContainer = ProPrimaryContainer
+val OnRoyalPurpleContainer = ProOnPrimaryContainer
 
 // Text & Content Shades
-val TextPrimaryDark = Color(0xFFF4F3F7) // Crisp high-contrast title/body text
-val TextSecondaryDark = Color(0xFFA09FA6) // Muted secondary body text
-val OutlineDark = Color(0xFF3E3D48) // Divider and card outline border
+val TextPrimaryDark = ProTextPrimary
+val TextSecondaryDark = ProTextSecondary
+val OutlineDark = ProOutline
 
 // Functional Status Colors
-val StudioLiveRed = Color(0xFFFF5449) // Live/Record indicator red
-val StudioSuccessGreen = Color(0xFF81C784) // Render success green
+val StudioLiveRed = ProLive
+val StudioSuccessGreen = ProSuccess
 
-// Backward Compatibility Bindings for Existing UI References
+// Studio* bindings used throughout the codebase
 val StudioPrimary = RoyalPurple
-val StudioOnPrimary = Color(0xFF260D5C)
+val StudioOnPrimary = Color(0xFF1A0F3C)
 val StudioPrimaryContainer = RoyalPurpleContainer
 val StudioOnPrimaryContainer = OnRoyalPurpleContainer
 
 val StudioSecondary = ElegantGold
-val StudioOnSecondary = Color(0xFF2B2100)
+val StudioOnSecondary = Color(0xFF00252B)
 val StudioSecondaryContainer = ElegantGoldContainer
 val StudioOnSecondaryContainer = OnElegantGoldContainer
 
@@ -49,5 +86,3 @@ val StudioSurfaceVariantDark = CharcoalSurfaceVariant
 val StudioOnSurfaceDark = TextPrimaryDark
 val StudioOnSurfaceVariantDark = TextSecondaryDark
 val StudioOutline = OutlineDark
-
-

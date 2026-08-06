@@ -15,6 +15,9 @@ import com.example.feature.live.LiveViewModel
 import com.example.feature.loop.LoopViewModel
 import com.example.feature.mastering.MasteringViewModel
 import com.example.feature.settings.SettingsViewModel
+import com.example.feature.slideshow.SlideshowViewModel
+import com.example.core.ffmpeg.SlideshowProcessor
+import com.example.feature.visualizer.VisualizerViewModel
 import com.example.ui.navigation.MainScreen
 import com.example.ui.theme.LoopingVidTheme
 import timber.log.Timber
@@ -62,6 +65,9 @@ class MainActivity : ComponentActivity() {
         val liveViewModel = LiveViewModel(repository)
         val historyViewModel = HistoryViewModel(repository, firestoreSyncManager)
         val settingsViewModel = SettingsViewModel(repository)
+        val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
+        val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
+        val visualizerViewModel = VisualizerViewModel(applicationContext)
         val exportViewModel = com.example.core.ui.ExportViewModel(mediaProcessor)
         val exportQueueViewModel = com.example.core.work.ExportQueueViewModel(application)
 
@@ -74,6 +80,8 @@ class MainActivity : ComponentActivity() {
                     liveViewModel = liveViewModel,
                     historyViewModel = historyViewModel,
                     settingsViewModel = settingsViewModel,
+                    slideshowViewModel = slideshowViewModel,
+                    visualizerViewModel = visualizerViewModel,
                     exportViewModel = exportViewModel,
                     exportQueueViewModel = exportQueueViewModel
                 )
