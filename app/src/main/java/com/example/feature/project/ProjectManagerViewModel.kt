@@ -8,10 +8,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.json.JSONException
+import org.json.JSONObject
+
+private const val STATUS_DRAFT = "draft"
+private const val STATUS_ARCHIVED = "archived"
+private const val COPY_SUFFIX = " (Copy)"
 
 data class ProjectManagerUiState(
     val projects: List<ProjectEntity> = emptyList(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
 class ProjectManagerViewModel(
@@ -32,26 +39,79 @@ class ProjectManagerViewModel(
     }
 
     fun createProject(name: String, type: ProjectType) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) {
+            setError("Nama proyek tidak boleh kosong")
+            return
+        }
         viewModelScope.launch {
+            repository.saveProject(ProjectEntity(name = trimmed, type = type.value, status = STATUS_DRAFT))
+        }
+    }
+
+    fun renameProject(project: ProjectEntity, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isBlank()) {
+            setError("Nama proyek tidak boleh kosong")
+            return
+        }
+        viewModelScope.launch {
+            repository.updateProject(project.copy(name = trimmed))
+        }
+    }
+
+    fun duplicateProject(project: ProjectEntity) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
             repository.saveProject(
-                ProjectEntity(
-                    name = name,
-                    type = type.value,
-                    status = "draft"
+                project.copy(
+                    id = 0,
+                    name = project.name + COPY_SUFFIX,
+                    status = STATUS_DRAFT,
+                    createdAt = now,
+                    updatedAt = now
                 )
             )
         }
     }
 
-    fun renameProject(project: ProjectEntity, newName: String) {
+    fun archiveProject(id: Long) {
         viewModelScope.launch {
-            repository.updateProject(project.copy(name = newName))
+            val project = repository.getProjectById(id) ?: return@launch
+            repository.updateProject(project.copy(status = STATUS_ARCHIVED))
+        }
+    }
+
+    fun updateProjectConfig(project: ProjectEntity, configJson: String) {
+        if (!isValidConfigJson(configJson)) {
+            setError("Konfigurasi proyek tidak valid")
+            return
+        }
+        viewModelScope.launch {
+            repository.updateProject(project.copy(configJson = configJson))
         }
     }
 
     fun deleteProject(id: Long) {
         viewModelScope.launch {
             repository.deleteProjectById(id)
+        }
+    }
+
+    fun dismissError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    private fun setError(message: String) {
+        _uiState.value = _uiState.value.copy(errorMessage = message)
+    }
+
+    private fun isValidConfigJson(configJson: String): Boolean {
+        return try {
+            JSONObject(configJson)
+            true
+        } catch (_: JSONException) {
+            false
         }
     }
 }

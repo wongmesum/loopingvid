@@ -97,6 +97,8 @@ fun AppNavHost(
                 viewModel = projectManagerViewModel,
                 onOpenHistory = { navController.navigate(NavDestination.History.route) },
                 onOpenLoop = { navController.navigate(NavDestination.Loop.route) },
+                onOpenEditor = { navController.navigate(NavDestination.Editor.route) },
+                onOpenMastering = { navController.navigate(NavDestination.Mastering.route) },
                 onOpenSlideshow = { navController.navigate(NavDestination.Slideshow.route) },
                 onOpenVisualizer = { navController.navigate(NavDestination.Visualizer.route) }
             )

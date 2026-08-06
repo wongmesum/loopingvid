@@ -74,4 +74,61 @@ class ProjectManagerViewModelTest {
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.projects.isEmpty())
     }
+
+    @Test
+    fun `create and rename rejects blank names`() = runTest(testDispatcher) {
+        viewModel.createProject("   ", ProjectType.LOOP)
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.projects.isEmpty())
+        assertEquals("Nama proyek tidak boleh kosong", viewModel.uiState.value.errorMessage)
+
+        viewModel.dismissError()
+        viewModel.createProject("Valid", ProjectType.LOOP)
+        advanceUntilIdle()
+        val created = viewModel.uiState.value.projects.single()
+
+        viewModel.renameProject(created, "")
+        advanceUntilIdle()
+        assertEquals("Valid", viewModel.uiState.value.projects.single().name)
+        assertEquals("Nama proyek tidak boleh kosong", viewModel.uiState.value.errorMessage)
+    }
+
+    @Test
+    fun `update config rejects invalid json`() = runTest(testDispatcher) {
+        viewModel.createProject("My Source", ProjectType.LOOP)
+        advanceUntilIdle()
+        val original = viewModel.uiState.value.projects.single()
+
+        viewModel.updateProjectConfig(original, "invalid json {")
+        advanceUntilIdle()
+        assertEquals("{}", viewModel.uiState.value.projects.single().configJson)
+        assertEquals("Konfigurasi proyek tidak valid", viewModel.uiState.value.errorMessage)
+
+        viewModel.dismissError()
+        viewModel.updateProjectConfig(original, """{"key": "value"}""")
+        advanceUntilIdle()
+        assertEquals("""{"key": "value"}""", viewModel.uiState.value.projects.single().configJson)
+    }
+
+    @Test
+    fun `duplicate and archive project`() = runTest(testDispatcher) {
+        viewModel.createProject("My Source", ProjectType.LOOP)
+        advanceUntilIdle()
+
+        val original = viewModel.uiState.value.projects.single()
+
+        viewModel.duplicateProject(original)
+        advanceUntilIdle()
+
+        val projects = viewModel.uiState.value.projects
+        assertEquals(2, projects.size)
+        assertTrue(projects.any { it.name == "My Source" })
+        assertTrue(projects.any { it.name == "My Source (Copy)" })
+
+        viewModel.archiveProject(original.id)
+        advanceUntilIdle()
+
+        val archived = viewModel.uiState.value.projects.find { it.id == original.id }
+        assertEquals("archived", archived?.status)
+    }
 }

@@ -4,6 +4,8 @@ import com.example.core.database.ProjectEntity
 
 enum class ProjectType(val value: String) {
     LOOP("loop"),
+    EDITOR("editor"),
+    MASTERING("mastering"),
     SLIDESHOW("slideshow"),
     VISUALIZER("visualizer");
 
