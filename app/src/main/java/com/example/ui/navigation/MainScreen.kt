@@ -129,7 +129,7 @@ fun MainScreen(
                         ),
                         actions = {
                             IconButton(
-                                onClick = { startOnboardingTour() },
+                                onClick = { navController.navigate(NavDestination.Panduan.route) },
                                 modifier = Modifier.testTag("main_onboarding_tour_button")
                             ) {
                                 Icon(Icons.Rounded.HelpOutline, contentDescription = "Panduan", tint = MaterialTheme.colorScheme.primary)
@@ -142,8 +142,8 @@ fun MainScreen(
                             }
                             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("Panduan Interaktif") },
-                                    onClick = { showMenu = false; startOnboardingTour() },
+                                    text = { Text("Panduan") },
+                                    onClick = { showMenu = false; navController.navigate(NavDestination.Panduan.route) },
                                     leadingIcon = { Icon(Icons.Rounded.HelpOutline, contentDescription = null) },
                                     modifier = Modifier.testTag("menu_item_panduan")
                                 )

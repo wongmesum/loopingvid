@@ -77,6 +77,7 @@ sealed class NavDestination(
                 Slideshow.route,
                 History.route,
                 Settings.route,
+                Panduan.route,
                 About.route,
                 Privacy.route,
                 SupportProject.route

@@ -103,21 +103,21 @@ val Typography = Typography(
         letterSpacing = 0.1.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = Inter,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.2.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = Inter,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.3.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = Inter,
+        fontFamily = PlusJakartaSans,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 14.sp,

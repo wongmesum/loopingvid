@@ -19,6 +19,7 @@ import com.example.feature.about.PrivacyPolicyScreen
 import com.example.feature.about.SupportProjectScreen
 import com.example.feature.editor.EditorScreen
 import com.example.feature.editor.EditorViewModel
+import com.example.feature.guide.GuideScreen
 import com.example.feature.history.HistoryScreen
 import com.example.feature.history.HistoryViewModel
 import com.example.feature.home.HomeScreen
@@ -139,6 +140,12 @@ fun AppNavHost(
                 onNavigateToPrivacy = { navController.navigate(NavDestination.Privacy.route) },
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToSupport = { navController.navigate(NavDestination.SupportProject.route) },
+                onStartOnboarding = onStartOnboarding
+            )
+        }
+        composable(NavDestination.Panduan.route) {
+            GuideScreen(
+                onNavigateBack = { navController.popBackStack() },
                 onStartOnboarding = onStartOnboarding
             )
         }
