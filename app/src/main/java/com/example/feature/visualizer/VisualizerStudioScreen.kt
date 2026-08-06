@@ -1,5 +1,6 @@
 package com.example.feature.visualizer
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,6 +32,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.example.core.ui.VideoPlayer
@@ -45,8 +47,21 @@ fun VisualizerStudioScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var currentPositionMs by remember { mutableLongStateOf(0L) }
-    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { viewModel.setAudioSource(it.toString(), it.lastPathSegment ?: "audio") }
+    val context = LocalContext.current
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // Ignore if permission isn't persistable (e.g. some third party providers)
+            }
+            // Resolving the display name could be done here via DocumentFile or ContentResolver query,
+            // but lastPathSegment is retained as a lightweight fallback consistent with the original.
+            viewModel.setAudioSource(it.toString(), it.lastPathSegment ?: "audio")
+        }
     }
 
     Column(
@@ -54,7 +69,7 @@ fun VisualizerStudioScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         VisualizerHeader()
-        AudioSourceCard(uiState.audioName, onPickAudio = { audioPicker.launch("audio/*") })
+        AudioSourceCard(uiState.audioName, onPickAudio = { audioPicker.launch(arrayOf("audio/*")) })
         VisualizerPreviewCard(
             uiState = uiState,
             viewModel = viewModel,
@@ -209,6 +224,7 @@ private fun VisualizerControlCard(config: VisualizerRenderConfig, viewModel: Vis
             Text("Kontrol Visual", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
             LabeledSlider("Jumlah bar: ${config.bandCount}", config.bandCount.toFloat(), 8f..64f) { viewModel.setBandCount(it.toInt()) }
             LabeledSlider("Sensitivitas: %.1fx".format(config.sensitivityGain), config.sensitivityGain, 0.2f..4f, viewModel::setSensitivity)
+            LabeledSlider("Smoothing: %.0f%%".format(config.smoothing * 100), config.smoothing, 0f..1f, viewModel::setSmoothing)
             LabeledSlider("Ukuran: %.1fx".format(config.sizeScale), config.sizeScale, 0.3f..2f, viewModel::setSizeScale)
             LabeledSlider("Ketebalan: %.0f".format(config.thickness), config.thickness, 1f..20f, viewModel::setThickness)
             LabeledSlider("Opacity: %.0f%%".format(config.opacity * 100), config.opacity, 0.1f..1f, viewModel::setOpacity)

@@ -29,6 +29,16 @@ class Media3SpectrumAudioProcessor : BaseAudioProcessor() {
             field = value.coerceIn(0.2f, 4.0f)
         }
 
+    /**
+     * Weight given to the previous frame when blending new magnitudes.
+     * 0f reacts instantly, higher values damp the movement. The default matches
+     * the blend this processor shipped with before the value was configurable.
+     */
+    var smoothing: Float = 0.4f
+        set(value) {
+            field = value.coerceIn(0f, 0.95f)
+        }
+
     private var currentMagnitudes = FloatArray(32)
     var peakDb: Float = -60f
         private set
@@ -133,7 +143,7 @@ class Media3SpectrumAudioProcessor : BaseAudioProcessor() {
         // Smooth transition with previous magnitudes
         for (b in 0 until bandCount) {
             val prev = if (b < currentMagnitudes.size) currentMagnitudes[b] else 0f
-            currentMagnitudes[b] = prev * 0.4f + bands[b] * 0.6f
+            currentMagnitudes[b] = prev * smoothing + bands[b] * (1f - smoothing)
         }
 
         // Estimate dominant frequency Hz (logarithmic spread across 20Hz - 16kHz)

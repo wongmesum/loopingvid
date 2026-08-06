@@ -48,4 +48,17 @@ class AudioSpectrumVisualizerTest {
         assertEquals(64, processor.bandCount)
         assertEquals(4.0f, processor.sensitivityGain, 0.01f)
     }
+
+    @Test
+    fun media3SpectrumAudioProcessor_clampsSmoothing() {
+        val processor = Media3SpectrumAudioProcessor()
+        processor.smoothing = -1.0f
+        assertEquals(0f, processor.smoothing, 0.01f)
+
+        processor.smoothing = 5.0f
+        assertEquals(0.95f, processor.smoothing, 0.01f)
+
+        processor.smoothing = 0.7f
+        assertEquals(0.7f, processor.smoothing, 0.01f)
+    }
 }

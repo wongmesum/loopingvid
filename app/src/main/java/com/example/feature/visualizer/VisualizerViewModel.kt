@@ -315,7 +315,9 @@ class VisualizerViewModel(
     }
 
     fun setSmoothing(value: Float) {
-        updateConfig { it.copy(smoothing = value.coerceIn(0f, 1f)) }
+        val safe = value.coerceIn(0f, 1f)
+        spectrumProcessor.smoothing = safe.coerceAtMost(0.95f)
+        updateConfig { it.copy(smoothing = safe) }
     }
 
     fun setSizeScale(scale: Float) {
