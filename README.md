@@ -1,73 +1,133 @@
-# LoopingVid Android Studio
+# LoopingVid — Professional Creator Studio
 
-A native Android mobile application designed for video looping, audio mastering, video composition/editing, job history management, and 24/7 RTMP live streaming with infinite seamless repeat.
-
----
-
-## Architecture & Technology Stack
-
-- **Platform:** Native Android (Kotlin)
-- **UI Framework:** Jetpack Compose with Material Design 3 Studio Theme
-- **Architecture:** MVVM (Model-View-ViewModel) + Repository Pattern
-- **Local Persistence:** Room Database (`RenderJobEntity`, `LiveSessionEntity`, `AppSettingEntity`)
-- **Media Engine:** Custom Coroutines MediaProcessor & DSP Audio Mastering Engine (5-Band Equalizer, Dynamics Compressor, Peak Limiter, LUFS Normalizer)
-- **Audio Visualizers:** Custom Canvas-rendered reactive audio spectrum bars, wave, and circular visualizers
-- **Background Live Streaming:** Foreground Service (`LiveStreamService`) with persistent notifications and direct pipeline integration
-- **Testing:** Robolectric & JUnit 4 JVM tests for ViewModel, Repository, and Media DSP engines
+Native Android application for video looping, audio mastering, visualizer studio,
+slideshow creation, project management, and 24/7 RTMP live streaming.
 
 ---
 
-## Package Structure
+## Aplikasi Utama
+
+Kode sumber utama berada di **`app/`** (Kotlin / Jetpack Compose).
+
+> Folder `flutter_app/` adalah eksperimen lama dan **bukan** aplikasi resmi.
+> Jangan gunakan `flutter_app/` untuk build produksi.
+
+---
+
+## Arsitektur & Stack
+
+| Layer | Teknologi |
+|-------|-----------|
+| Platform | Android native (Kotlin) |
+| UI | Jetpack Compose + Material Design 3 (dark theme) |
+| Arsitektur | MVVM + Repository Pattern |
+| Database | Room v4 (migrasi non-destruktif v3→v4) |
+| Media | Media3 / ExoPlayer, custom AudioProcessor |
+| Render | FFmpeg via native library |
+| Live | RTMP foreground service |
+| AI | Firebase AI (Gemini) |
+| Background | WorkManager (export queue) |
+| Test | JUnit 4, Robolectric, Roborazzi |
+
+---
+
+## Fitur Stabil
+
+- **Video Loop** — Normal, Crossfade, Ping-Pong dengan durasi target dan progress render.
+- **Audio Mastering** — 5-Band EQ, Dynamics Compressor, Peak Limiter, LUFS Normalizer.
+- **Video Editor** — Merge video/image + audio, text overlay, color grading, undo/redo.
+- **Live Streaming** — YouTube / TikTok / Custom RTMP, foreground service, thermal monitoring.
+- **History** — Render jobs dan live sessions tersimpan di Room.
+- **Settings** — Output directory, stream key terenkripsi, preview toggle.
+- **Project Manager** — Simpan, buka, rename, duplikasi, arsip, dan hapus proyek.
+
+## Fitur Eksperimental
+
+- **Visualizer Studio** — Preview audio-reactive 6 mode, beat detection, export ke video.
+- **Slideshow** — Multi-image dengan transisi dan audio. Masih dalam pengembangan.
+- **Beat Sync** — Deteksi BPM, Tap BPM, marker manual, efek reaktif.
+
+---
+
+## Build
+
+Prasyarat:
+- JDK 17 (Temurin)
+- Android SDK (compileSdk 36)
+- Gradle 9.3.1 (wrapper sudah tersedia)
+
+```bash
+# Debug build
+./gradlew :app:assembleDebug
+
+# Unit tests
+./gradlew :app:testDebugUnitTest
+
+# Compile check
+./gradlew :app:compileDebugKotlin
+```
+
+Lokasi APK output: `app/build/outputs/apk/debug/app-debug.apk`
+
+> **Catatan:** Host dengan RAM < 4 GB mungkin mengalami OOM saat Gradle daemon.
+> Gunakan `--no-daemon --max-workers=1` atau CI (GitHub Actions) untuk full build.
+
+---
+
+## CI / GitHub Actions
+
+Workflow native: `.github/workflows/build-native-apk.yml`
+- Trigger: push ke `main` dan `feature/pro-ui-visualizer`
+- Steps: unit test → assembleDebug → upload APK artifact
+
+---
+
+## Navigasi Utama
+
+| Tab | Konten |
+|-----|--------|
+| Beranda | Dashboard proyek dan shortcut |
+| Studio | Video Loop, Video Editor, Audio Mastering, Visualizer Studio, Slideshow |
+| Live | RTMP streaming studio |
+| Proyek | Project Manager |
+
+Menu tambahan: Pengaturan, Panduan, Riwayat, Tentang, Kebijakan Privasi, Dukungan.
+
+---
+
+## Struktur Folder
 
 ```
-com.example/
+app/src/main/java/com/example/
 ├── MainActivity.kt
 ├── core/
-│   ├── database/         # Room Database, DAOs, Entities, Repository
-│   ├── media/            # Audio Spectrum, Waveform Analyzer, Mastering DSP
-│   ├── ffmpeg/           # Coroutine MediaProcessor & Render Engine
-│   └── ui/               # Common theme, components, colors, typography
+│   ├── database/       # Room DB, DAOs, Entities, Migrations, Repository
+│   ├── media/          # AudioProcessor, Waveform, AutoSave, Templates
+│   ├── ffmpeg/         # FFmpegWrapper, MediaProcessor, VisualizerProcessor
+│   ├── work/           # VideoExportWorker, ExportQueueViewModel
+│   ├── utils/          # MediaStoreExporter, ThermalMonitor, etc.
+│   └── ui/             # Shared UI components
 ├── feature/
-│   ├── loop/             # Video Loop Studio (Normal, Crossfade, Ping-Pong)
-│   ├── mastering/        # Audio Mastering Studio (5-Band EQ, Compression, LUFS)
-│   ├── editor/           # Video Editor & Composition (Text overlays, Spectrum)
-│   ├── live/             # Go Live Studio & Foreground Service (YouTube, TikTok, Custom RTMP)
-│   ├── history/          # Render Jobs & Live Sessions History
-│   └── settings/         # Storage paths, stream keys, preview settings
+│   ├── loop/           # Video Loop
+│   ├── mastering/      # Audio Mastering
+│   ├── editor/         # Video Editor
+│   ├── visualizer/     # Visualizer Studio + Beat Sync
+│   ├── slideshow/      # Slideshow creator
+│   ├── live/           # Live Streaming + foreground service
+│   ├── project/        # Project Manager
+│   ├── history/        # Render/Live history
+│   ├── settings/       # App settings
+│   └── about/          # About, Privacy, Support
+└── ui/
+    ├── navigation/     # NavDestination, MainScreen, AppNavHost
+    └── theme/          # Color, Theme, Type
 ```
 
 ---
 
-## Feature Parity & Roadmap
+## Catatan Teknis
 
-### Phase 1 Features (Implemented & Parity)
-| Feature | Parity Status | Details |
-|---|---|---|
-| **Loop Tool** | ✅ Complete | Input picker, Target duration slider, Normal / Crossfade / Ping-Pong styles, Mute audio, Quality presets, Async render progress & cancel. |
-| **Audio Mastering** | ✅ Complete | Waveform preview, 5-Band EQ, Dynamics Compressor, Peak Limiter, LUFS meter, Presets (Clear, Deep Bass, Vocal, Neutral), WAV/MP3/M4A export. |
-| **Video Editor** | ✅ Complete | Merge video/image + audio track, Title & Watermark text overlays, Audio spectrum overlay (Bars, Wave, Circle), Preview canvas. |
-| **Live Streaming (MVP Phase 1)** | ✅ Complete | Direct "Go Live with this" pipeline, YouTube / TikTok RTMP / Custom RTMP, Infinite loop streaming without gap, Live telemetry (Bitrate, RTT, Loop #N counter), Foreground Service. |
-| **History** | ✅ Complete | Filterable history for Render Jobs and Live Streaming sessions, delete items, direct Go Live button. |
-| **Settings** | ✅ Complete | Output directory config, High-Quality Preview toggle, Encrypted Stream Key manager, System hardware info. |
-
-### Phase 2 Roadmap
-- **Gallery Slideshow + Transitions:** Multi-image video generation.
-- **Multi-Track Audio Mixer:** Ducking, BGM + Mic live mixing.
-- **AI Transcription:** Gemini API integration for automated subtitles & LRC lyrics sync.
-- **Simulcast Streaming:** Multi-platform simultaneous RTMP push.
-
----
-
-## How to Build and Run
-
-1. Open the project in **Android Studio** (Koala / Ladybug or newer).
-2. Sync Gradle dependencies: `gradle :app:assembleDebug`
-3. Run Unit Tests: `gradle :app:testDebugUnitTest`
-4. Deploy to device or streaming emulator.
-
----
-
-## Technical Notes
-
-- **TikTok Live Disclaimer:** TikTok RTMP key input requires an eligible TikTok account with Live Studio / RTMP access.
-- **Foreground Service:** Continuous live streaming runs in `LiveStreamService` with `mediaProjection|microphone` foreground type as required by Android 14+.
+- Database menggunakan migrasi eksplisit dari v3 ke atas. Versi 1-2 masih memakai destructive fallback.
+- Schema JSON Room (`app/schemas/`) di-export oleh KSP saat build.
+- Debug keystore di-generate oleh CI; tidak disimpan di repository.
+- ABI native saat ini: `armeabi-v7a`, `x86`. Penambahan `arm64-v8a` menunggu verifikasi library FFmpeg.
