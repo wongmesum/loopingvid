@@ -7,6 +7,7 @@ import com.example.core.database.AppDatabase
 import com.example.core.database.LoopingVidRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.asExecutor
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -33,8 +34,13 @@ class ProjectManagerViewModelTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<Context>()
+        // Room runs queries on its own executors by default, which advanceUntilIdle()
+        // cannot wait for — the Flow would not have emitted yet when we assert.
+        // Pinning both executors to the test dispatcher makes emissions deterministic.
         database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
+            .setQueryExecutor(testDispatcher.asExecutor())
+            .setTransactionExecutor(testDispatcher.asExecutor())
             .build()
         val repository = LoopingVidRepository(
             database.renderJobDao(),
