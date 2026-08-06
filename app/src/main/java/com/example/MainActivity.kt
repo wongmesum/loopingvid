@@ -15,6 +15,7 @@ import com.example.feature.history.HistoryViewModel
 import com.example.feature.live.LiveViewModel
 import com.example.feature.loop.LoopViewModel
 import com.example.feature.mastering.MasteringViewModel
+import com.example.feature.project.ProjectManagerViewModel
 import com.example.feature.settings.SettingsViewModel
 import com.example.feature.slideshow.SlideshowViewModel
 import com.example.core.ffmpeg.SlideshowProcessor
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val db = AppDatabase.getDatabase(applicationContext)
-        val repository = LoopingVidRepository(db.renderJobDao(), db.liveSessionDao(), db.appSettingDao(), db.jobHistoryDao())
+        val repository = LoopingVidRepository(db.renderJobDao(), db.liveSessionDao(), db.appSettingDao(), db.jobHistoryDao(), db.editorAutoSaveDao(), db.projectDao())
         val firestoreSyncManager = FirestoreJobHistorySyncManager(applicationContext, repository)
         repository.firestoreSyncManager = firestoreSyncManager
 
@@ -65,6 +66,7 @@ class MainActivity : ComponentActivity() {
         val editorViewModel = EditorViewModel(mediaProcessor, applicationContext)
         val liveViewModel = LiveViewModel(repository)
         val historyViewModel = HistoryViewModel(repository, firestoreSyncManager)
+        val projectManagerViewModel = ProjectManagerViewModel(repository)
         val settingsViewModel = SettingsViewModel(repository)
         val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
         val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
@@ -81,6 +83,7 @@ class MainActivity : ComponentActivity() {
                     editorViewModel = editorViewModel,
                     liveViewModel = liveViewModel,
                     historyViewModel = historyViewModel,
+                    projectManagerViewModel = projectManagerViewModel,
                     settingsViewModel = settingsViewModel,
                     slideshowViewModel = slideshowViewModel,
                     visualizerViewModel = visualizerViewModel,

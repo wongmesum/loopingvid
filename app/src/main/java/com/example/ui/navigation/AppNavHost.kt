@@ -28,6 +28,8 @@ import com.example.feature.loop.LoopScreen
 import com.example.feature.loop.LoopViewModel
 import com.example.feature.mastering.MasteringScreen
 import com.example.feature.mastering.MasteringViewModel
+import com.example.feature.project.ProjectManagerScreen
+import com.example.feature.project.ProjectManagerViewModel
 import com.example.feature.settings.SettingsScreen
 import com.example.feature.settings.SettingsViewModel
 import com.example.feature.slideshow.SlideshowScreen
@@ -44,6 +46,7 @@ fun AppNavHost(
     editorViewModel: EditorViewModel,
     liveViewModel: LiveViewModel,
     historyViewModel: HistoryViewModel,
+    projectManagerViewModel: ProjectManagerViewModel,
     settingsViewModel: SettingsViewModel,
     slideshowViewModel: SlideshowViewModel,
     visualizerViewModel: VisualizerViewModel,
@@ -90,7 +93,15 @@ fun AppNavHost(
             LiveScreen(viewModel = liveViewModel, initialSourceUri = passedLiveSourceUri)
         }
         composable(NavDestination.Proyek.route) {
-            // Using HistoryScreen as the foundation for the upcoming Project manager
+            ProjectManagerScreen(
+                viewModel = projectManagerViewModel,
+                onOpenHistory = { navController.navigate(NavDestination.History.route) },
+                onOpenLoop = { navController.navigate(NavDestination.Loop.route) },
+                onOpenSlideshow = { navController.navigate(NavDestination.Slideshow.route) },
+                onOpenVisualizer = { navController.navigate(NavDestination.Visualizer.route) }
+            )
+        }
+        composable(NavDestination.History.route) {
             HistoryScreen(viewModel = historyViewModel, onNavigateToGoLive = onNavigateToGoLive)
         }
 

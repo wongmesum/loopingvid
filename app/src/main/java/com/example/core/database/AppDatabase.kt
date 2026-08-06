@@ -6,9 +6,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [RenderJobEntity::class, LiveSessionEntity::class, AppSettingEntity::class, JobHistoryEntity::class, EditorAutoSaveEntity::class],
-    version = 3,
-    exportSchema = false
+    entities = [RenderJobEntity::class, LiveSessionEntity::class, AppSettingEntity::class, JobHistoryEntity::class, EditorAutoSaveEntity::class, ProjectEntity::class],
+    version = 4,
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun renderJobDao(): RenderJobDao
@@ -16,6 +16,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun appSettingDao(): AppSettingDao
     abstract fun jobHistoryDao(): JobHistoryDao
     abstract fun editorAutoSaveDao(): EditorAutoSaveDao
+    abstract fun projectDao(): ProjectDao
 
     companion object {
         @Volatile
@@ -27,7 +28,15 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "loopingvid_db"
-                ).fallbackToDestructiveMigration(dropAllTables = true).build()
+                )
+                    .addMigrations(MIGRATION_3_4)
+                    // Schemas 1 and 2 shipped before exportSchema was enabled, so
+                    // there is no record to migrate them from. Those installs are
+                    // still rebuilt from scratch. Every version from 3 onward must
+                    // supply an explicit migration instead of silently wiping user
+                    // render history and settings.
+                    .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1, 2)
+                    .build()
                 INSTANCE = instance
                 instance
             }

@@ -154,18 +154,18 @@ fun getOnboardingSteps(): List<OnboardingStep> = listOf(
     OnboardingStep(
         stepIndex = 5,
         totalSteps = 5,
-        route = "history",
-        moduleTitle = "Antrean & Riwayat Ekspor",
-        moduleSubtitle = "Pemantauan Render Background",
-        title = "5. Manajemen Job & Status Cloud",
-        description = "Pantau status pengerjaan ekspor video FFmpeg di latar belakang, sinkronisasi riwayat ke Firestore, dan lihat ringkasan spesifikasi ekspor media.",
+        route = "projects",
+        moduleTitle = "Project Manager",
+        moduleSubtitle = "Manajemen Proyek & Riwayat",
+        title = "5. Kelola Proyek Kreatif",
+        description = "Simpan proyek loop video, slideshow, dan visualizer dalam satu tempat. Riwayat render tetap tersedia dari tombol Riwayat.",
         icon = Icons.Default.History,
         highlights = listOf(
             "Foreground Service rendering tanpa gangguan",
             "Notifikasi progres ekspor real-time",
             "Ringkasan spesifikasi ekspor komplit"
         ),
-        targetTestTag = "tab_history"
+        targetTestTag = "tab_proyek"
     )
 )
 
@@ -232,7 +232,7 @@ fun OnboardingOverlay(
                     "mastering" -> 0.30f
                     "editor" -> 0.50f
                     "live" -> 0.70f
-                    "history" -> 0.90f
+                    "projects" -> 0.90f
                     else -> 0.50f
                 }
 

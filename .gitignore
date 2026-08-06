@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# Crash dumps
+hs_err_pid*.log
+hs_err_pid*.mdmp
+replay_pid*.log

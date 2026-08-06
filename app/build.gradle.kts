@@ -61,6 +61,13 @@ android {
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+
+  // MigrationTestHelper loads the exported schema JSON from the test assets,
+  // so the KSP output directory has to be visible to both test source sets.
+  sourceSets {
+    getByName("test").assets.srcDir("$projectDir/schemas")
+    getByName("androidTest").assets.srcDir("$projectDir/schemas")
+  }
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -71,6 +78,10 @@ secrets {
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
+
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
+}
 
 // Some unused dependencies are commented out below instead of being removed.
 // This makes it easy to add them back in the future if needed.
@@ -142,5 +153,7 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
+  testImplementation(libs.androidx.room.testing)
+  androidTestImplementation(libs.androidx.room.testing)
   "ksp"(libs.moshi.kotlin.codegen)
 }

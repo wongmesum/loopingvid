@@ -44,6 +44,7 @@ import com.example.feature.history.HistoryViewModel
 import com.example.feature.live.LiveViewModel
 import com.example.feature.loop.LoopViewModel
 import com.example.feature.mastering.MasteringViewModel
+import com.example.feature.project.ProjectManagerViewModel
 import com.example.feature.settings.SettingsViewModel
 import com.example.feature.slideshow.SlideshowViewModel
 import com.example.feature.visualizer.VisualizerViewModel
@@ -56,6 +57,7 @@ fun MainScreen(
     editorViewModel: EditorViewModel,
     liveViewModel: LiveViewModel,
     historyViewModel: HistoryViewModel,
+    projectManagerViewModel: ProjectManagerViewModel,
     settingsViewModel: SettingsViewModel,
     slideshowViewModel: SlideshowViewModel,
     visualizerViewModel: VisualizerViewModel,
@@ -237,6 +239,7 @@ fun MainScreen(
                     editorViewModel = editorViewModel,
                     liveViewModel = liveViewModel,
                     historyViewModel = historyViewModel,
+                    projectManagerViewModel = projectManagerViewModel,
                     settingsViewModel = settingsViewModel,
                     slideshowViewModel = slideshowViewModel,
                     visualizerViewModel = visualizerViewModel,

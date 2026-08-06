@@ -8,6 +8,7 @@ class LoopingVidRepository(
     private val appSettingDao: AppSettingDao,
     private val jobHistoryDao: JobHistoryDao? = null,
     private val editorAutoSaveDao: EditorAutoSaveDao? = null,
+    private val projectDao: ProjectDao? = null,
     var firestoreSyncManager: FirestoreJobHistorySyncManager? = null
 ) {
     // Editor Auto-Save Session
@@ -83,6 +84,27 @@ class LoopingVidRepository(
     suspend fun updateLiveSession(session: LiveSessionEntity) = liveSessionDao.updateSession(session)
 
     suspend fun deleteLiveSessionById(id: Long) = liveSessionDao.deleteSessionById(id)
+
+    // Projects
+    val allProjects: Flow<List<ProjectEntity>> =
+        projectDao?.getAllProjects() ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    fun getProjectsByType(type: String): Flow<List<ProjectEntity>> =
+        projectDao?.getProjectsByType(type) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    fun getRecentProjects(limit: Int): Flow<List<ProjectEntity>> =
+        projectDao?.getRecentProjects(limit) ?: kotlinx.coroutines.flow.flowOf(emptyList())
+
+    suspend fun getProjectById(id: Long): ProjectEntity? = projectDao?.getProjectById(id)
+
+    suspend fun saveProject(project: ProjectEntity): Long =
+        projectDao?.insertProject(project) ?: -1L
+
+    suspend fun updateProject(project: ProjectEntity) {
+        projectDao?.updateProject(project.copy(updatedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun deleteProjectById(id: Long) = projectDao?.deleteProjectById(id)
 
     // Settings
     val allSettings: Flow<List<AppSettingEntity>> = appSettingDao.getAllSettings()

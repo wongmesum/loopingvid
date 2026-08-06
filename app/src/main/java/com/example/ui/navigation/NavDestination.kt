@@ -36,7 +36,7 @@ sealed class NavDestination(
     object Beranda : NavDestination("beranda", "Beranda", Icons.Rounded.Home, "tab_beranda")
     object Studio : NavDestination("studio", "Studio", Icons.Rounded.AutoAwesomeMosaic, "tab_studio")
     object Live : NavDestination("live", "Live", Icons.Rounded.Radio, "tab_live")
-    object Proyek : NavDestination("history", "Proyek", Icons.Rounded.FolderSpecial, "tab_proyek")
+    object Proyek : NavDestination("projects", "Proyek", Icons.Rounded.FolderSpecial, "tab_proyek")
 
     // --- Studio tools (existing routes preserved) ---
     object Loop : NavDestination("loop", "Video Loop", Icons.Rounded.Loop, "studio_loop")
@@ -44,6 +44,13 @@ sealed class NavDestination(
     object Mastering : NavDestination("mastering", "Audio Mastering", Icons.Rounded.Equalizer, "studio_mastering")
     object Visualizer : NavDestination("visualizer", "Visualizer Studio", Icons.Rounded.GraphicEq, "studio_visualizer")
     object Slideshow : NavDestination("slideshow", "Slideshow", Icons.Rounded.Slideshow, "studio_slideshow")
+
+    /**
+     * The former "Proyek" tab content. Preserved as a reachable sub-page (deep
+     * links, "Go Live with this" hand-offs) now that Proyek hosts the real
+     * Project Manager.
+     */
+    object History : NavDestination("history_log", "Riwayat", Icons.Rounded.FolderSpecial, "menu_history")
 
     // --- Additional menu ---
     object Settings : NavDestination("settings", "Pengaturan", Icons.Rounded.Settings, "menu_pengaturan")
@@ -68,6 +75,7 @@ sealed class NavDestination(
                 Mastering.route,
                 Visualizer.route,
                 Slideshow.route,
+                History.route,
                 Settings.route,
                 About.route,
                 Privacy.route,

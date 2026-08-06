@@ -16,5 +16,6 @@ data class RenderJobEntity(
     val durationSec: Double,
     val fileSizeMb: Double,
     val createdAt: Long = System.currentTimeMillis(),
-    val paramsSummary: String = ""
+    val paramsSummary: String = "",
+    val projectId: Long? = null
 )
