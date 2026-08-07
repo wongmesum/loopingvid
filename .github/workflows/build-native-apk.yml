@@ -2,7 +2,7 @@ name: Build Native Android APK
 
 on:
   push:
-    branches: [main, feature/pro-ui-visualizer, fix/stabilize-pro-ui-visualizer]
+    branches: [main, feature/pro-ui-visualizer, fix/stabilize-pro-ui-visualizer, release/1.1.0-stabilization]
   pull_request:
     branches: [main]
   workflow_dispatch:
