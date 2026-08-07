@@ -22,11 +22,11 @@ object FfmpegInputResolver {
     private fun copyContentUriToCache(context: Context, uri: Uri): ResolvedInput {
         val extension = resolveExtension(context, uri)
         val inputDir = File(context.cacheDir, "ffmpeg-inputs").apply { mkdirs() }
-        val target = File.createTempFile("visualizer_input_", ".$extension", inputDir)
+        val target = File.createTempFile("ffmpeg_input_", ".$extension", inputDir)
 
         context.contentResolver.openInputStream(uri)?.use { input ->
             target.outputStream().use { output -> input.copyTo(output) }
-        } ?: error("Tidak dapat membuka sumber audio")
+        } ?: error("Tidak dapat membuka sumber media")
 
         return ResolvedInput(path = target.absolutePath, temporaryFile = target)
     }

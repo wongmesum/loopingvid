@@ -55,6 +55,7 @@ import com.example.core.ui.FfmpegCircularProgressIndicator
 import com.example.ui.theme.ProLive
 import com.example.ui.theme.ProPrimary
 import com.example.ui.theme.ProSuccess
+import timber.log.Timber
 
 /**
  * Slideshow Studio: pick images, order them, set timing/transition/ratio,
@@ -80,7 +81,9 @@ fun SlideshowScreen(
                         Intent.FLAG_GRANT_READ_URI_PERMISSION
                     )
                 } catch (e: SecurityException) {
-                    // Ignore
+                    // Not all providers grant persistable access; the copy in
+                    // FfmpegInputResolver still works for this session.
+                    Timber.w(e, "Persistable permission denied for image %s", uri)
                 }
                 SlideshowImage(uri = uri.toString(), displayName = uri.lastPathSegment ?: "gambar")
             }
@@ -97,7 +100,7 @@ fun SlideshowScreen(
                     Intent.FLAG_GRANT_READ_URI_PERMISSION
                 )
             } catch (e: SecurityException) {
-                // Ignore
+                Timber.w(e, "Persistable permission denied for audio %s", it)
             }
             viewModel.setAudio(it.toString(), it.lastPathSegment ?: "audio")
         }
