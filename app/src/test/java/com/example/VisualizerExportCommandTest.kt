@@ -5,6 +5,7 @@ import com.example.feature.visualizer.VisualizerBackground
 import com.example.feature.visualizer.VisualizerExportCommandBuilder
 import com.example.feature.visualizer.VisualizerMode
 import com.example.feature.visualizer.VisualizerRenderConfig
+import com.example.feature.visualizer.beat.BeatEffect
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -186,17 +187,49 @@ class VisualizerExportCommandTest {
     }
 
     @Test
-    fun `beat markers become an enabled zoom expression when effects are active`() {
+    fun `beat markers become a timeline filter when effects are active`() {
         val args = VisualizerExportCommandBuilder.build(
             audioPath = audio,
             outputPath = output,
             config = VisualizerRenderConfig(),
             beatMarkersMs = listOf(0L, 500L, 1000L),
-            beatEffectExpression = "scale"
+            beatEffectExpression = BeatEffect.BASS_PULSE.name
         )
 
         val filter = args[args.indexOf("-filter_complex") + 1]
         assertTrue("Beat markers must appear as timestamps", filter.contains("0.500"))
+        assertTrue(filter.contains("brightness=0.08"))
+    }
+
+    @Test
+    fun `each beat effect maps to a distinct export filter`() {
+        val filters = BeatEffect.entries.map { effect ->
+            val args = VisualizerExportCommandBuilder.build(
+                audioPath = audio,
+                outputPath = output,
+                config = VisualizerRenderConfig(),
+                beatMarkersMs = listOf(500L),
+                beatEffectExpression = effect.name
+            )
+            args[args.indexOf("-filter_complex") + 1]
+        }
+
+        assertEquals(BeatEffect.entries.size, filters.distinct().size)
+        assertTrue(filters.all { it.contains("0.500") })
+    }
+
+    @Test
+    fun `transparent background falls back to opaque black for h264`() {
+        val args = VisualizerExportCommandBuilder.build(
+            audio,
+            output,
+            VisualizerRenderConfig(background = VisualizerBackground.Transparent)
+        )
+
+        val filter = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(filter.contains("color=c=black:"))
+        assertTrue(!filter.contains("black@0.0"))
+        assertTrue(args.contains("yuv420p"))
     }
 
     @Test(expected = IllegalArgumentException::class)

@@ -17,10 +17,11 @@ import java.util.Locale
  * - WAVE / LINE        -> `showwaves`
  * - CIRCLE / PARTICLES -> `showcqt` (radial spectrum)
  *
- * Beat effects are applied through timeline-enabled `eq` pulses at the detected
- * marker positions. This is a brightness/contrast pulse rather than a
- * geometric zoom: per-frame geometry changes require frame-by-frame rendering,
- * which this single-pass command deliberately does not attempt.
+ * Beat effects are applied through timeline-enabled filters at the detected
+ * marker positions. Each of the 8 [BeatEffect] types maps to a distinct FFmpeg
+ * filter (eq, hue, gamma combinations) so exported output differentiates them.
+ * Geometric effects (zoom, shake) are approximated with colour-space transforms
+ * since per-frame geometry requires frame-by-frame rendering.
  */
 object VisualizerExportCommandBuilder {
 
@@ -106,7 +107,10 @@ object VisualizerExportCommandBuilder {
             }
 
             VisualizerBackground.Transparent ->
-                "color=c=black@0.0:s=${canvas.size}:r=$FRAME_RATE[bg]"
+                // MP4 H.264 yuv420p does not support alpha. Fall back to solid black
+                // rather than producing a broken file. The UI should hide Transparent
+                // for non-alpha formats, but this is the safety net.
+                "color=c=black:s=${canvas.size}:r=$FRAME_RATE[bg]"
         }
 
     private fun visualizerChain(
@@ -162,18 +166,40 @@ object VisualizerExportCommandBuilder {
     }
 
     /**
-     * Emits a timeline-enabled brightness/contrast pulse at each beat marker.
+     * Emits a timeline-enabled filter at each beat marker, chosen per effect.
+     *
+     * Each effect maps to a distinct FFmpeg filter rather than sharing one
+     * brightness pulse, so the exported video differentiates them the way the
+     * preview does. Effects whose preview transform is geometric per-frame
+     * (KICK_ZOOM, SNARE_SHAKE, TEXT_BOUNCE) cannot be reproduced exactly in a
+     * single pass, so they are approximated with the closest colour-space
+     * filter. These are deliberately *not* claimed to be pixel-identical to the
+     * Compose preview.
+     *
      * Returns null when there is nothing to sync to.
      */
-    private fun beatPulseFilter(beatMarkersMs: List<Long>, effectExpression: String?): String? {
-        if (beatMarkersMs.isEmpty() || effectExpression.isNullOrBlank()) return null
+    private fun beatPulseFilter(beatMarkersMs: List<Long>, effectName: String?): String? {
+        if (beatMarkersMs.isEmpty() || effectName.isNullOrBlank()) return null
 
         val windows = beatMarkersMs.joinToString("+") { markerMs ->
             val start = markerMs / 1000.0
             val end = start + BEAT_PULSE_SECONDS
             "between(t,${format(start)},${format(end)})"
         }
-        return "eq=brightness=0.10:contrast=1.15:enable='$windows'"
+
+        val filter = when (effectName) {
+            "BASS_PULSE" -> "eq=brightness=0.08:contrast=1.12"
+            "BEAT_FLASH" -> "eq=brightness=0.28:saturation=1.05"
+            "KICK_ZOOM" -> "eq=contrast=1.35:brightness=0.06"
+            "COLOR_SHIFT" -> "hue=h=35:s=1.25"
+            "BACKGROUND_PULSE" -> "eq=gamma=1.25:brightness=0.05"
+            "SNARE_SHAKE" -> "eq=contrast=1.20:saturation=0.85"
+            "PARTICLE_BURST" -> "eq=saturation=1.45:brightness=0.10"
+            "TEXT_BOUNCE" -> "eq=gamma=0.85:contrast=1.15"
+            else -> return null
+        }
+
+        return "$filter:enable='$windows'"
     }
 
     private fun format(seconds: Double): String = String.format(Locale.US, "%.3f", seconds)

@@ -3,7 +3,10 @@ package com.example.core.ffmpeg
 import android.content.Context
 import com.example.core.database.LoopingVidRepository
 import com.example.core.database.RenderJobEntity
+import com.example.core.utils.FfmpegInputResolver
 import com.example.core.utils.MediaStoreExporter
+import com.example.core.utils.ResolvedInput
+import com.example.feature.visualizer.VisualizerBackground
 import com.example.feature.visualizer.VisualizerExportCommandBuilder
 import com.example.feature.visualizer.VisualizerRenderConfig
 import kotlinx.coroutines.CancellationException
@@ -43,11 +46,26 @@ class VisualizerProcessor(
             _progressState.value = JobProgressState(
                 jobId = jobId,
                 isProcessing = true,
-                statusText = "Menyiapkan render visualizer..."
+                statusText = "Menyiapkan sumber audio..."
             )
 
+            var resolvedAudio: ResolvedInput? = null
+            var resolvedImage: ResolvedInput? = null
+
             try {
-                executeRender(request, outputFile, initialJob, jobId)
+                resolvedAudio = FfmpegInputResolver.resolve(context, request.audioUri)
+                resolvedImage = (request.config.background as? VisualizerBackground.Image)?.let { bg ->
+                    FfmpegInputResolver.resolve(context, bg.uri)
+                }
+
+                val requestWithResolvedFiles = request.copy(
+                    audioUri = resolvedAudio.path,
+                    config = resolvedImage?.let { img ->
+                        request.config.copy(background = VisualizerBackground.Image(img.path, (request.config.background as VisualizerBackground.Image).blurRadius))
+                    } ?: request.config
+                )
+
+                executeRender(requestWithResolvedFiles, outputFile, initialJob, jobId)
                 completeRender(outputFile, initialJob, jobId)
             } catch (error: CancellationException) {
                 repository.updateJob(initialJob.copy(id = jobId, status = "CANCELLED"))
@@ -55,6 +73,9 @@ class VisualizerProcessor(
             } catch (error: Exception) {
                 failRender(initialJob, jobId, error)
                 throw error
+            } finally {
+                resolvedAudio?.temporaryFile?.delete()
+                resolvedImage?.temporaryFile?.delete()
             }
         }
 
