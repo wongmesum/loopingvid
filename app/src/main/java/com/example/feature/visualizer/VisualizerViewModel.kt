@@ -9,6 +9,7 @@ import com.example.core.ffmpeg.VisualizerProcessor
 import com.example.core.ffmpeg.VisualizerRenderRequest
 import com.example.core.media.Media3SpectrumAudioProcessor
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import com.example.feature.visualizer.beat.BeatDetectionConfig
 import com.example.feature.visualizer.beat.BeatDetectionEngine
 import com.example.feature.visualizer.beat.BeatEffect
@@ -83,6 +84,7 @@ class VisualizerViewModel(
     val spectrumProcessor = Media3SpectrumAudioProcessor()
     private val tapBpmDetector = TapBpmDetector()
     private var decodedDurationMs: Long = 0L
+    private var analysisJob: Job? = null
 
     init {
         visualizerProcessor?.let { processor ->
@@ -141,9 +143,13 @@ class VisualizerViewModel(
 
     private fun analyzeBeats(uri: String) {
         val context = appContext ?: return
+
+        // Switching tracks must abandon the in-flight decode: it can take seconds
+        // on a long file, and its result would otherwise land on the new track.
+        analysisJob?.cancel()
         _uiState.update { it.copy(beatSync = it.beatSync.copy(isAnalyzing = true, analysisError = null)) }
 
-        viewModelScope.launch {
+        analysisJob = viewModelScope.launch {
             val decoded = PcmDecoder.decode(context, uri)
             decoded.fold(
                 onSuccess = { pcm ->
@@ -165,6 +171,11 @@ class VisualizerViewModel(
                     }
                 },
                 onFailure = { error ->
+                    if (error is CancellationException) {
+                        // The coroutine was cancelled (e.g. by another track pick),
+                        // don't overwrite the new track's state with a cancellation error.
+                        throw error
+                    }
                     _uiState.update {
                         it.copy(
                             beatSync = it.beatSync.copy(

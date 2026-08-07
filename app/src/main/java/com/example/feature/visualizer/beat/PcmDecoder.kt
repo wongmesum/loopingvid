@@ -6,6 +6,8 @@ import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -45,6 +47,7 @@ object PcmDecoder {
     const val TARGET_SAMPLE_RATE = 22050
     private const val DEQUEUE_TIMEOUT_US = 10_000L
     private const val MAX_DURATION_MS = 10 * 60 * 1000L // Guard against pathological inputs
+    private const val MAX_DECODED_SAMPLES = (TARGET_SAMPLE_RATE * MAX_DURATION_MS) / 1000L
 
     suspend fun decode(context: Context, uri: String): Result<DecodedPcm> =
         withContext(Dispatchers.IO) {
@@ -81,6 +84,11 @@ object PcmDecoder {
                         durationMs = if (durationMs > 0) durationMs else estimateDurationMs(samples.size)
                     )
                 )
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                // Must propagate, not become a Result.failure — swallowing it here
+                // would break structured concurrency and let a cancelled job report
+                // a normal result instead of actually stopping.
+                throw error
             } catch (error: Exception) {
                 Result.failure(error)
             } finally {
@@ -98,7 +106,7 @@ object PcmDecoder {
         return null
     }
 
-    private fun drainDecoder(
+    private suspend fun drainDecoder(
         extractor: MediaExtractor,
         codec: MediaCodec,
         channelCount: Int,
@@ -113,6 +121,7 @@ object PcmDecoder {
         var outputDone = false
 
         while (!outputDone) {
+            currentCoroutineContext().ensureActive()
             if (!inputDone) {
                 inputDone = feedInput(extractor, codec)
             }
@@ -133,6 +142,9 @@ object PcmDecoder {
                             )
                         }
                         codec.releaseOutputBuffer(outputIndex, false)
+                        if (output.size >= MAX_DECODED_SAMPLES) {
+                            outputDone = true
+                        }
                     }
                     if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
                         outputDone = true

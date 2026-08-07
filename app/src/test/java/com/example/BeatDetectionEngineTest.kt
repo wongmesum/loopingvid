@@ -187,4 +187,21 @@ class BeatDetectionEngineTest {
 
         assertEquals(listOf(250L, 1250L, 2250L), markers)
     }
+
+    @Test
+    fun `manual bpm ignores NaN and Infinity`() {
+        assertTrue(BeatDetectionEngine.gridFromBpm(Double.NaN, 4000L, 0L).isEmpty())
+        assertTrue(BeatDetectionEngine.gridFromBpm(Double.POSITIVE_INFINITY, 4000L, 0L).isEmpty())
+        assertTrue(BeatDetectionEngine.gridFromBpm(Double.NEGATIVE_INFINITY, 4000L, 0L).isEmpty())
+        assertTrue(BeatDetectionEngine.gridFromBpm(-120.0, 4000L, 0L).isEmpty())
+        assertTrue(BeatDetectionEngine.gridFromBpm(500.0, 4000L, 0L).isEmpty()) // Clamp unrealistic fast
+    }
+
+    @Test
+    fun `manual bpm with negative offset drops markers before zero`() {
+        val markers = BeatDetectionEngine.gridFromBpm(bpm = 120.0, durationMs = 2000L, offsetMs = -200L)
+        // 120BPM = 500ms intervals. Offset -200ms means markers at:
+        // -200 (dropped), 300, 800, 1300, 1800.
+        assertEquals(listOf(300L, 800L, 1300L, 1800L), markers)
+    }
 }

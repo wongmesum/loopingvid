@@ -48,6 +48,8 @@ object BeatDetectionEngine {
     private const val HOP_SIZE = 512
     private const val WINDOW_SIZE = 1024
     private const val HISTORY_FRAMES = 43 // ~1 second of history at 44100/512
+    private const val MIN_BPM = 20.0
+    private const val MAX_BPM = 300.0
 
     fun analyze(
         pcm: FloatArray,
@@ -64,7 +66,13 @@ object BeatDetectionEngine {
         val onsetFrames = detectOnsets(energyFrames, config)
         val markersMs = framesToMs(onsetFrames, sampleRate)
         val intervalFiltered = enforceMinInterval(markersMs, config.minIntervalMs)
-        val shifted = intervalFiltered.map { it + config.offsetMs }
+        // A negative offset can push early markers before the start of the track.
+        // Drop those instead of clamping, which would stack them all at 0 ms.
+        val shifted = intervalFiltered
+            .map { it + config.offsetMs }
+            .filter { it >= 0L }
+            .distinct()
+            .sorted()
 
         val bpm = estimateBpm(shifted)
         val confidence = if (shifted.size >= 4) 0.8f else if (shifted.size >= 2) 0.5f else 0f
@@ -81,14 +89,26 @@ object BeatDetectionEngine {
         return 60_000.0 / avgIntervalMs
     }
 
-    /** Generate an evenly-spaced beat grid from a known BPM. */
+    /**
+     * Generate an evenly-spaced beat grid from a known BPM.
+     *
+     * Rejects values that cannot describe a real tempo — NaN, infinities, and
+     * anything outside [MIN_BPM]..[MAX_BPM] — so a bad manual entry or a Tap BPM
+     * double-tap cannot flood the timeline with markers. A negative offset is
+     * allowed (it nudges the grid earlier), but markers landing before 0 ms are
+     * dropped rather than clamped, which would otherwise stack them all at 0.
+     */
     fun gridFromBpm(bpm: Double, durationMs: Long, offsetMs: Long = 0L): List<Long> {
-        if (bpm <= 0.0 || durationMs <= 0L) return emptyList()
+        if (!bpm.isFinite() || bpm < MIN_BPM || bpm > MAX_BPM) return emptyList()
+        if (durationMs <= 0L) return emptyList()
+
         val intervalMs = (60_000.0 / bpm).roundToLong()
+        if (intervalMs <= 0L) return emptyList()
+
         val markers = mutableListOf<Long>()
         var current = offsetMs
         while (current < durationMs) {
-            markers.add(current)
+            if (current >= 0L) markers.add(current)
             current += intervalMs
         }
         return markers
