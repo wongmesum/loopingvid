@@ -26,7 +26,7 @@ object FfmpegInputResolver {
 
         context.contentResolver.openInputStream(uri)?.use { input ->
             target.outputStream().use { output -> input.copyTo(output) }
-        } ?: error("Tidak dapat membuka sumber media")
+        } ?: error("Cannot open media source")
 
         return ResolvedInput(path = target.absolutePath, temporaryFile = target)
     }

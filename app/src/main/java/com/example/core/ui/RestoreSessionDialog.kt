@@ -72,7 +72,7 @@ fun RestoreSessionDialog(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = "Notifikasi Sesi",
+                            contentDescription = "Session Notification",
                             tint = Color(0xFF38BDF8),
                             modifier = Modifier.size(22.dp)
                         )
@@ -81,13 +81,13 @@ fun RestoreSessionDialog(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Draf Penyuntingan Terakhir",
+                        text = "Last Editing Draft",
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Sesi sebelumnya otomatis tersimpan dengan aman",
+                        text = "Previous session automatically saved securely",
                         color = Color(0xFF94A3B8),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -162,7 +162,7 @@ fun RestoreSessionDialog(
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Abaikan", color = Color(0xFF94A3B8), fontSize = 12.sp)
+                    Text("Discard", color = Color(0xFF94A3B8), fontSize = 12.sp)
                 }
 
                 Button(
@@ -181,7 +181,7 @@ fun RestoreSessionDialog(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Pulihkan",
+                        text = "Restore",
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold

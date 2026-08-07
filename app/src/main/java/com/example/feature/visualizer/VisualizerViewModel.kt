@@ -164,7 +164,7 @@ class VisualizerViewModel(
                                 durationMs = pcm.durationMs,
                                 markersMs = result.markersMs,
                                 analysisError = if (result.markersMs.isEmpty()) {
-                                    "Tidak ada beat terdeteksi. Coba turunkan threshold atau gunakan Tap BPM."
+                                    "No beats detected. Try lowering threshold or use Tap BPM."
                                 } else null
                             )
                         )
@@ -180,7 +180,7 @@ class VisualizerViewModel(
                         it.copy(
                             beatSync = it.beatSync.copy(
                                 isAnalyzing = false,
-                                analysisError = error.localizedMessage ?: "Analisis beat gagal"
+                                analysisError = error.localizedMessage ?: "Beat analysis failed"
                             )
                         )
                     }
@@ -409,12 +409,12 @@ class VisualizerViewModel(
         val state = _uiState.value
         val audioUri = state.audioUri
         if (audioUri.isNullOrBlank()) {
-            _uiState.update { it.copy(validationMessage = "Pilih audio sumber terlebih dahulu.") }
+            _uiState.update { it.copy(validationMessage = "Please select an audio source first.") }
             return
         }
         val processor = visualizerProcessor
         if (processor == null) {
-            _uiState.update { it.copy(validationMessage = "Mesin render belum siap.") }
+            _uiState.update { it.copy(validationMessage = "Render engine not ready.") }
             return
         }
         if (state.jobProgress.isProcessing) return

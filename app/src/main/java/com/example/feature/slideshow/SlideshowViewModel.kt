@@ -113,7 +113,7 @@ class SlideshowViewModel(
     fun renderSlideshow() {
         val state = _uiState.value
         if (state.images.isEmpty()) {
-            _uiState.value = state.copy(validationMessage = "Pilih minimal satu gambar terlebih dahulu.")
+            _uiState.value = state.copy(validationMessage = "Please select at least one image first.")
             return
         }
         if (state.jobProgress.isProcessing) return

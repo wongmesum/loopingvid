@@ -37,7 +37,7 @@ class VisualizerProcessor(
 
     suspend fun renderVisualizer(request: VisualizerRenderRequest): RenderJobEntity =
         withContext(Dispatchers.IO) {
-            require(request.audioUri.isNotBlank()) { "Pilih audio sumber terlebih dahulu" }
+            require(request.audioUri.isNotBlank()) { "Please select an audio source first" }
 
             val outputFile = createOutputFile(request.outputName)
             val initialJob = createInitialJob(request, outputFile)
@@ -46,7 +46,7 @@ class VisualizerProcessor(
             _progressState.value = JobProgressState(
                 jobId = jobId,
                 isProcessing = true,
-                statusText = "Menyiapkan sumber audio..."
+                statusText = "Preparing audio source..."
             )
 
             var resolvedAudio: ResolvedInput? = null
@@ -83,7 +83,7 @@ class VisualizerProcessor(
         ffmpegWrapper.cancel()
         _progressState.value = JobProgressState(
             isProcessing = false,
-            errorMessage = "Render visualizer dibatalkan"
+            errorMessage = "Visualizer render cancelled"
         )
     }
 
@@ -104,15 +104,15 @@ class VisualizerProcessor(
             updateProgress(initialJob, jobId, progress)
         }
         check(exitCode == 0 && outputFile.exists()) {
-            "FFmpeg gagal merender visualizer (kode $exitCode)"
+            "FFmpeg failed to render visualizer (code $exitCode)"
         }
     }
 
     private suspend fun updateProgress(initialJob: RenderJobEntity, jobId: Long, progress: Int) {
         val status = when {
-            progress < 20 -> "Menganalisis audio ($progress%)"
-            progress < 80 -> "Merender visual ($progress%)"
-            else -> "Mengenkode video ($progress%)"
+            progress < 20 -> "Analyzing audio ($progress%)"
+            progress < 80 -> "Rendering visuals ($progress%)"
+            else -> "Encoding video ($progress%)"
         }
         _progressState.value = JobProgressState(jobId, true, progress, status)
         if (progress % 10 == 0) {
@@ -142,7 +142,7 @@ class VisualizerProcessor(
         _progressState.value = JobProgressState(
             jobId = jobId,
             progress = 100,
-            statusText = "Visualizer tersimpan di galeri",
+            statusText = "Visualizer saved to gallery",
             outputFilePath = outputFile.absolutePath
         )
         return completed
@@ -152,7 +152,7 @@ class VisualizerProcessor(
         repository.updateJob(initialJob.copy(id = jobId, status = "FAILED"))
         _progressState.value = JobProgressState(
             jobId = jobId,
-            errorMessage = error.localizedMessage ?: "Render visualizer gagal"
+            errorMessage = error.localizedMessage ?: "Visualizer render failed"
         )
     }
 
@@ -176,7 +176,7 @@ class VisualizerProcessor(
             durationSec = request.durationMs / 1000.0,
             fileSizeMb = 0.0,
             paramsSummary = "${request.config.mode.name}, ${request.config.aspectRatio}, " +
-                "${request.config.bandCount} band, ${request.beatMarkersMs.size} beat"
+                "${request.config.bandCount} bands, ${request.beatMarkersMs.size} beats"
         )
 }
 

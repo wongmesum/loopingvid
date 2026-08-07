@@ -28,7 +28,7 @@ class SlideshowProcessor(
 
     suspend fun renderSlideshow(request: SlideshowRenderRequest): RenderJobEntity =
         withContext(Dispatchers.IO) {
-            require(request.imageUris.isNotEmpty()) { "Pilih minimal satu gambar" }
+            require(request.imageUris.isNotEmpty()) { "Select at least one image" }
             val outputFile = createOutputFile(request.outputName)
             val initialJob = createInitialJob(request, outputFile)
             val jobId = repository.saveJob(initialJob)
@@ -36,7 +36,7 @@ class SlideshowProcessor(
             _progressState.value = JobProgressState(
                 jobId = jobId,
                 isProcessing = true,
-                statusText = "Menyiapkan ${request.imageUris.size} gambar..."
+                statusText = "Preparing ${request.imageUris.size} images..."
             )
 
             val resolvedImages = mutableListOf<ResolvedInput>()
@@ -71,7 +71,7 @@ class SlideshowProcessor(
         ffmpegWrapper.cancel()
         _progressState.value = JobProgressState(
             isProcessing = false,
-            errorMessage = "Render slideshow dibatalkan"
+            errorMessage = "Slideshow render cancelled"
         )
     }
 
@@ -96,15 +96,15 @@ class SlideshowProcessor(
             updateProgress(initialJob, jobId, progress)
         }
         check(exitCode == 0 && outputFile.exists()) {
-            "FFmpeg gagal merender slideshow (kode $exitCode)"
+            "FFmpeg failed to render slideshow (code $exitCode)"
         }
     }
 
     private suspend fun updateProgress(initialJob: RenderJobEntity, jobId: Long, progress: Int) {
         val status = when {
-            progress < 25 -> "Membaca gambar ($progress%)"
-            progress < 70 -> "Menerapkan transisi ($progress%)"
-            else -> "Mengenkode video ($progress%)"
+            progress < 25 -> "Reading images ($progress%)"
+            progress < 70 -> "Applying transitions ($progress%)"
+            else -> "Encoding video ($progress%)"
         }
         _progressState.value = JobProgressState(jobId, true, progress, status)
         if (progress % 10 == 0) {
@@ -135,7 +135,7 @@ class SlideshowProcessor(
         _progressState.value = JobProgressState(
             jobId = jobId,
             progress = 100,
-            statusText = "Slideshow tersimpan di galeri",
+            statusText = "Slideshow saved to gallery",
             outputFilePath = outputFile.absolutePath
         )
         return completed
@@ -145,7 +145,7 @@ class SlideshowProcessor(
         repository.updateJob(initialJob.copy(id = jobId, status = "FAILED"))
         _progressState.value = JobProgressState(
             jobId = jobId,
-            errorMessage = error.localizedMessage ?: "Render slideshow gagal"
+            errorMessage = error.localizedMessage ?: "Slideshow render failed"
         )
     }
 
@@ -170,7 +170,7 @@ class SlideshowProcessor(
             progress = 0,
             durationSec = duration.coerceAtLeast(request.perImageDurationSec),
             fileSizeMb = 0.0,
-            paramsSummary = "${request.imageUris.size} gambar, ${request.aspectRatio}, ${request.resolution}"
+            paramsSummary = "${request.imageUris.size} images, ${request.aspectRatio}, ${request.resolution}"
         )
     }
 }

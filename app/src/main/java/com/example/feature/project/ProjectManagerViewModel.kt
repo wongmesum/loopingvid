@@ -41,7 +41,7 @@ class ProjectManagerViewModel(
     fun createProject(name: String, type: ProjectType) {
         val trimmed = name.trim()
         if (trimmed.isBlank()) {
-            setError("Nama proyek tidak boleh kosong")
+            setError("Project name cannot be empty")
             return
         }
         viewModelScope.launch {
@@ -52,7 +52,7 @@ class ProjectManagerViewModel(
     fun renameProject(project: ProjectEntity, newName: String) {
         val trimmed = newName.trim()
         if (trimmed.isBlank()) {
-            setError("Nama proyek tidak boleh kosong")
+            setError("Project name cannot be empty")
             return
         }
         viewModelScope.launch {
@@ -84,7 +84,7 @@ class ProjectManagerViewModel(
 
     fun updateProjectConfig(project: ProjectEntity, configJson: String) {
         if (!isValidConfigJson(configJson)) {
-            setError("Konfigurasi proyek tidak valid")
+            setError("Invalid project configuration")
             return
         }
         viewModelScope.launch {
