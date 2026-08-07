@@ -1,5 +1,6 @@
 package com.example.feature.slideshow
 
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -46,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
@@ -65,21 +67,40 @@ fun SlideshowScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents()
+        contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->
         viewModel.addImages(
             uris.map { uri ->
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                } catch (e: SecurityException) {
+                    // Ignore
+                }
                 SlideshowImage(uri = uri.toString(), displayName = uri.lastPathSegment ?: "gambar")
             }
         )
     }
 
     val audioPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
+        contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        uri?.let { viewModel.setAudio(it.toString(), it.lastPathSegment ?: "audio") }
+        uri?.let {
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (e: SecurityException) {
+                // Ignore
+            }
+            viewModel.setAudio(it.toString(), it.lastPathSegment ?: "audio")
+        }
     }
 
     Column(
@@ -94,7 +115,7 @@ fun SlideshowScreen(
 
         SlideshowImagePicker(
             images = uiState.images,
-            onPickImages = { imagePickerLauncher.launch("image/*") },
+            onPickImages = { imagePickerLauncher.launch(arrayOf("image/*")) },
             onRemove = viewModel::removeImage,
             onMoveLeft = { index -> viewModel.moveImage(index, index - 1) },
             onMoveRight = { index -> viewModel.moveImage(index, index + 1) }
@@ -102,7 +123,7 @@ fun SlideshowScreen(
 
         SlideshowAudioPicker(
             audioName = uiState.audioName,
-            onPickAudio = { audioPickerLauncher.launch("audio/*") },
+            onPickAudio = { audioPickerLauncher.launch(arrayOf("audio/*")) },
             onClearAudio = { viewModel.setAudio(null, "") }
         )
 

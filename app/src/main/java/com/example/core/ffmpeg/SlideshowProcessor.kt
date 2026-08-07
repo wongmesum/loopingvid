@@ -3,7 +3,9 @@ package com.example.core.ffmpeg
 import android.content.Context
 import com.example.core.database.LoopingVidRepository
 import com.example.core.database.RenderJobEntity
+import com.example.core.utils.FfmpegInputResolver
 import com.example.core.utils.MediaStoreExporter
+import com.example.core.utils.ResolvedInput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,8 +39,21 @@ class SlideshowProcessor(
                 statusText = "Menyiapkan ${request.imageUris.size} gambar..."
             )
 
+            val resolvedImages = mutableListOf<ResolvedInput>()
+            var resolvedAudio: ResolvedInput? = null
+
             try {
-                executeRender(request, outputFile, initialJob, jobId)
+                for (uri in request.imageUris) {
+                    resolvedImages.add(FfmpegInputResolver.resolve(context, uri))
+                }
+                resolvedAudio = request.audioUri?.let { FfmpegInputResolver.resolve(context, it) }
+
+                val resolvedRequest = request.copy(
+                    imageUris = resolvedImages.map { it.path },
+                    audioUri = resolvedAudio?.path
+                )
+
+                executeRender(resolvedRequest, outputFile, initialJob, jobId)
                 completeRender(request, outputFile, initialJob, jobId)
             } catch (error: CancellationException) {
                 repository.updateJob(initialJob.copy(id = jobId, status = "CANCELLED"))
@@ -46,6 +61,9 @@ class SlideshowProcessor(
             } catch (error: Exception) {
                 failRender(initialJob, jobId, error)
                 throw error
+            } finally {
+                resolvedImages.forEach { it.temporaryFile?.delete() }
+                resolvedAudio?.temporaryFile?.delete()
             }
         }
 

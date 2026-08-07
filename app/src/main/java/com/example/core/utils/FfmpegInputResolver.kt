@@ -44,6 +44,14 @@ object FfmpegInputResolver {
             "audio/mp4", "audio/aac" -> "m4a"
             "audio/wav", "audio/x-wav" -> "wav"
             "audio/ogg" -> "ogg"
+            "audio/flac" -> "flac"
+            "image/jpeg" -> "jpg"
+            "image/png" -> "png"
+            "image/webp" -> "webp"
+            "image/heic", "image/heif" -> "heic"
+            "video/mp4" -> "mp4"
+            // FFmpeg probes content rather than trusting the extension, so an
+            // unknown type still decodes; the suffix only aids demuxer guessing.
             else -> "bin"
         }
     }
