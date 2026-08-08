@@ -18,8 +18,8 @@ android {
     applicationId = "com.aistudio.loopingvid.kxmpzq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    versionCode = 2
+    versionName = "1.1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -28,13 +28,24 @@ android {
     }
   }
 
+  // The upload keystore is deliberately absent from the repository, so the signing config is
+  // only registered when a real keystore plus both passwords are available. Declaring it
+  // unconditionally makes packageRelease fail at execution time on any machine without the
+  // key, which blocks local release-candidate verification for no security benefit.
+  val releaseKeystore = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
+  val releaseStorePassword: String? = System.getenv("STORE_PASSWORD")
+  val releaseKeyPassword: String? = System.getenv("KEY_PASSWORD")
+  val canSignRelease =
+    releaseKeystore.exists() && !releaseStorePassword.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
+
   signingConfigs {
-    create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+    if (canSignRelease) {
+      create("release") {
+        storeFile = releaseKeystore
+        storePassword = releaseStorePassword
+        keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+        keyPassword = releaseKeyPassword
+      }
     }
   }
 
@@ -42,8 +53,10 @@ android {
     release {
       isCrunchPngs = false
       isMinifyEnabled = false
+      isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      // Null leaves the APK unsigned; a distributable build requires the env vars above.
+      signingConfig = signingConfigs.findByName("release")
     }
     debug {
       // Use default debug signing config
