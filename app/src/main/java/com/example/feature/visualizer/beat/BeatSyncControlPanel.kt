@@ -52,6 +52,8 @@ fun BeatSyncControlPanel(
     onMinIntervalChange: (Long) -> Unit,
     onStrengthChange: (Float) -> Unit,
     onEffectChange: (BeatEffect) -> Unit,
+    onGridDivisionChange: (BeatGridDivision) -> Unit,
+    onQuantizeMarkers: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var manualBpmText by remember(beatSync.bpm) {
@@ -74,6 +76,13 @@ fun BeatSyncControlPanel(
             )
             FrequencyBandSelector(beatSync.config.band, onBandChange)
             EffectSelector(beatSync.selectedEffect, onEffectChange)
+            GridDivisionSelector(
+                selected = beatSync.gridDivision,
+                canQuantize = BeatGridSnapper.gridStepMs(beatSync.bpm, beatSync.gridDivision) != null &&
+                    beatSync.markersMs.isNotEmpty(),
+                onSelect = onGridDivisionChange,
+                onQuantize = onQuantizeMarkers
+            )
 
             ControlSlider("Sensitivitas", beatSync.config.sensitivity, 0.1f..4f, onSensitivityChange)
             ControlSlider("Threshold", beatSync.config.threshold, 0.05f..1f, onThresholdChange)
@@ -177,6 +186,35 @@ private fun EffectSelector(selected: BeatEffect, onSelect: (BeatEffect) -> Unit)
                     modifier = Modifier.testTag("beat_effect_${effect.name.lowercase()}")
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun GridDivisionSelector(
+    selected: BeatGridDivision,
+    canQuantize: Boolean,
+    onSelect: (BeatGridDivision) -> Unit,
+    onQuantize: () -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Grid snap", style = MaterialTheme.typography.labelMedium)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(BeatGridDivision.entries) { division ->
+                FilterChip(
+                    selected = selected == division,
+                    onClick = { onSelect(division) },
+                    label = { Text(division.label) },
+                    modifier = Modifier.testTag("beat_grid_${division.name.lowercase()}")
+                )
+            }
+        }
+        OutlinedButton(
+            onClick = onQuantize,
+            enabled = canQuantize,
+            modifier = Modifier.testTag("beat_quantize")
+        ) {
+            Text("Quantize markers")
         }
     }
 }

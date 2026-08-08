@@ -39,6 +39,9 @@ fun BeatTimeline(
     markersMs: List<Long>,
     durationMs: Long,
     currentPositionMs: Long,
+    bpm: Double = 0.0,
+    gridDivision: BeatGridDivision = BeatGridDivision.OFF,
+    offsetMs: Long = 0L,
     onAddMarker: (Long) -> Unit,
     onMoveMarker: (Int, Long) -> Unit,
     onRemoveMarker: (Int) -> Unit,
@@ -114,6 +117,25 @@ fun BeatTimeline(
                 strokeWidth = 2f
             )
 
+            val gridStepMs = BeatGridSnapper.gridStepMs(bpm, gridDivision)
+            if (gridStepMs != null) {
+                // Cap line count so a long track with a fine grid can't flood the canvas.
+                val firstLineMs = offsetMs.mod(gridStepMs)
+                var lineMs = firstLineMs
+                var linesDrawn = 0
+                while (lineMs <= safeDuration && linesDrawn < MAX_GRID_LINES) {
+                    val x = timeToX(lineMs, safeDuration, size.width)
+                    drawLine(
+                        color = outlineColor.copy(alpha = 0.35f),
+                        start = Offset(x, 4f),
+                        end = Offset(x, size.height - 4f),
+                        strokeWidth = 1f
+                    )
+                    lineMs += gridStepMs
+                    linesDrawn++
+                }
+            }
+
             val playheadX = timeToX(currentPositionMs, safeDuration, size.width)
             drawLine(
                 color = ProSecondary,
@@ -168,6 +190,8 @@ private fun TimelineHeader(
         }
     }
 }
+
+private const val MAX_GRID_LINES = 400
 
 private fun nearestMarkerIndex(markers: List<Long>, targetMs: Long): Int =
     markers.indices.minByOrNull { abs(markers[it] - targetMs) } ?: -1

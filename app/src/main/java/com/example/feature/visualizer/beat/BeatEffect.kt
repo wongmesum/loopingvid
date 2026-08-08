@@ -12,7 +12,9 @@ enum class BeatEffect(val label: String) {
     COLOR_SHIFT("Color Shift"),
     PARTICLE_BURST("Particle Burst"),
     BACKGROUND_PULSE("Background Pulse"),
-    TEXT_BOUNCE("Text Bounce")
+    TEXT_BOUNCE("Text Bounce"),
+    NEON_STROBE("Neon Strobe"),
+    WAVE_RIPPLE("Wave Ripple")
 }
 
 /**

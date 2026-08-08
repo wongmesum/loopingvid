@@ -91,6 +91,24 @@ class BeatDetectionEngineTest {
     }
 
     @Test
+    fun `smoothing still detects tempo on noisy pulses`() {
+        val base = buildPulsedPcm(bpm = 120, durationSec = 8.0)
+        val noisy = base.mapIndexed { index, sample ->
+            val noise = if (index % 97 == 0) 0.12f else 0f
+            (sample + noise).coerceIn(-1f, 1f)
+        }.toFloatArray()
+
+        val raw = BeatDetectionEngine.analyze(noisy, sampleRate, BeatDetectionConfig(smoothing = 0f))
+        val smoothed = BeatDetectionEngine.analyze(noisy, sampleRate, BeatDetectionConfig(smoothing = 0.75f))
+
+        assertTrue("Smoothed detection must still find beats", smoothed.markersMs.isNotEmpty())
+        assertTrue(
+            "Smoothing must not create more markers than raw noise",
+            smoothed.markersMs.size <= raw.markersMs.size
+        )
+    }
+
+    @Test
     fun `offset shifts every marker by the configured amount`() {
         val pcm = buildPulsedPcm(bpm = 120, durationSec = 6.0)
         val base = BeatDetectionEngine.analyze(pcm, sampleRate, BeatDetectionConfig())

@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.audio.AnalysisOptions
+import com.example.core.audio.AudioAnalysisRepository
+import com.example.core.audio.AudioAnalysisResult
 import com.example.core.ffmpeg.JobProgressState
 import com.example.core.ffmpeg.VisualizerProcessor
 import com.example.core.ffmpeg.VisualizerRenderRequest
@@ -13,6 +16,8 @@ import kotlinx.coroutines.Job
 import com.example.feature.visualizer.beat.BeatDetectionConfig
 import com.example.feature.visualizer.beat.BeatDetectionEngine
 import com.example.feature.visualizer.beat.BeatEffect
+import com.example.feature.visualizer.beat.BeatGridDivision
+import com.example.feature.visualizer.beat.BeatGridSnapper
 import com.example.feature.visualizer.beat.BeatMarkerEditor
 import com.example.feature.visualizer.beat.BeatPulseCalculator
 import com.example.feature.visualizer.beat.BeatSyncState
@@ -75,16 +80,22 @@ data class VisualizerUiState(
  */
 class VisualizerViewModel(
     private val appContext: Context? = null,
-    private val visualizerProcessor: VisualizerProcessor? = null
+    private val visualizerProcessor: VisualizerProcessor? = null,
+    private val audioAnalysisRepository: AudioAnalysisRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VisualizerUiState())
     val uiState: StateFlow<VisualizerUiState> = _uiState.asStateFlow()
 
+    private val _fullAnalysis = MutableStateFlow<AudioAnalysisResult?>(null)
+    /** Waveform/spectrum/BPM/loudness data, populated once [audioAnalysisRepository] finishes. */
+    val fullAnalysis: StateFlow<AudioAnalysisResult?> = _fullAnalysis.asStateFlow()
+
     val spectrumProcessor = Media3SpectrumAudioProcessor()
     private val tapBpmDetector = TapBpmDetector()
     private var decodedDurationMs: Long = 0L
     private var analysisJob: Job? = null
+    private var fullAnalysisJob: Job? = null
 
     init {
         visualizerProcessor?.let { processor ->
@@ -118,11 +129,46 @@ class VisualizerViewModel(
                 beatSync = BeatSyncState() // Reset any previous track's analysis.
             )
         }
+        // Full analysis is not started here: beat detection already decodes this
+        // file, and a second concurrent decode would cost seconds for data no
+        // screen consumes yet. Callers ask for it via requestFullAnalysis().
+        fullAnalysisJob?.cancel()
+        _fullAnalysis.value = null
         analyzeBeats(uri)
     }
 
     fun setPlaying(playing: Boolean) {
         _uiState.update { it.copy(isPlaying = playing) }
+    }
+
+    /**
+     * Requests a full waveform/spectrum/BPM/loudness analysis through the
+     * [AudioAnalysisRepository] cache. Safe to call multiple times — the result
+     * is cached, and a second call for the same track is a no-op.
+     */
+    fun requestFullAnalysis() {
+        val uri = _uiState.value.audioUri ?: return
+        val repository = audioAnalysisRepository ?: return
+        // Already in flight or completed for this URI
+        if (_fullAnalysis.value != null || fullAnalysisJob?.isActive == true) return
+
+        fullAnalysisJob = viewModelScope.launch {
+            repository.getOrAnalyze(
+                uri = android.net.Uri.parse(uri),
+                options = AnalysisOptions()
+            ).fold(
+                onSuccess = { result ->
+                    if (_uiState.value.audioUri == uri) {
+                        _fullAnalysis.value = result
+                    }
+                },
+                onFailure = { error ->
+                    if (error is CancellationException) throw error
+                    // Beat detection still uses PcmDecoder, so full analysis failure
+                    // must not prevent the existing Visualizer workflow.
+                }
+            )
+        }
     }
 
     /** Updates the beat pulse envelope for the given playback position. Call every preview frame. */
@@ -242,11 +288,40 @@ class VisualizerViewModel(
         _uiState.update { it.copy(beatSync = it.beatSync.copy(selectedEffect = effect)) }
     }
 
+    fun setBeatGridDivision(division: BeatGridDivision) {
+        _uiState.update { it.copy(beatSync = it.beatSync.copy(gridDivision = division)) }
+    }
+
+    fun quantizeBeatMarkers() {
+        _uiState.update { state ->
+            val sync = state.beatSync
+            state.copy(
+                beatSync = sync.copy(
+                    markersMs = BeatGridSnapper.quantize(
+                        markers = sync.markersMs,
+                        bpm = sync.bpm,
+                        division = sync.gridDivision,
+                        offsetMs = sync.config.offsetMs,
+                        durationMs = sync.durationMs
+                    )
+                )
+            )
+        }
+    }
+
     fun addBeatMarker(markerMs: Long) {
         _uiState.update { state ->
+            val sync = state.beatSync
+            val targetMs = BeatGridSnapper.snap(
+                markerMs = markerMs,
+                bpm = sync.bpm,
+                division = sync.gridDivision,
+                offsetMs = sync.config.offsetMs,
+                durationMs = sync.durationMs
+            )
             state.copy(
-                beatSync = state.beatSync.copy(
-                    markersMs = BeatMarkerEditor.add(state.beatSync.markersMs, markerMs, state.beatSync.durationMs)
+                beatSync = sync.copy(
+                    markersMs = BeatMarkerEditor.add(sync.markersMs, targetMs, sync.durationMs)
                 )
             )
         }
@@ -254,9 +329,17 @@ class VisualizerViewModel(
 
     fun moveBeatMarker(index: Int, markerMs: Long) {
         _uiState.update { state ->
+            val sync = state.beatSync
+            val targetMs = BeatGridSnapper.snap(
+                markerMs = markerMs,
+                bpm = sync.bpm,
+                division = sync.gridDivision,
+                offsetMs = sync.config.offsetMs,
+                durationMs = sync.durationMs
+            )
             state.copy(
-                beatSync = state.beatSync.copy(
-                    markersMs = BeatMarkerEditor.move(state.beatSync.markersMs, index, markerMs, state.beatSync.durationMs)
+                beatSync = sync.copy(
+                    markersMs = BeatMarkerEditor.move(sync.markersMs, index, targetMs, sync.durationMs)
                 )
             )
         }

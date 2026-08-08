@@ -18,8 +18,8 @@ import java.util.Locale
  * - CIRCLE / PARTICLES -> `showcqt` (radial spectrum)
  *
  * Beat effects are applied through timeline-enabled filters at the detected
- * marker positions. Each of the 8 [BeatEffect] types maps to a distinct FFmpeg
- * filter (eq, hue, gamma combinations) so exported output differentiates them.
+ * marker positions. Each [BeatEffect] type maps to a distinct FFmpeg filter
+ * (eq, hue, gamma combinations) so exported output differentiates them.
  * Geometric effects (zoom, shake) are approximated with colour-space transforms
  * since per-frame geometry requires frame-by-frame rendering.
  */
@@ -196,6 +196,8 @@ object VisualizerExportCommandBuilder {
             "SNARE_SHAKE" -> "eq=contrast=1.20:saturation=0.85"
             "PARTICLE_BURST" -> "eq=saturation=1.45:brightness=0.10"
             "TEXT_BOUNCE" -> "eq=gamma=0.85:contrast=1.15"
+            "NEON_STROBE" -> "eq=brightness=0.15:saturation=1.35:gamma=1.1"
+            "WAVE_RIPPLE" -> "eq=contrast=1.12:gamma=0.92"
             else -> return null
         }
 

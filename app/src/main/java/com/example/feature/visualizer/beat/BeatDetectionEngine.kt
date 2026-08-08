@@ -1,7 +1,9 @@
 package com.example.feature.visualizer.beat
 
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToLong
+import kotlin.math.sqrt
 
 /** Which frequency range to analyze for onsets. */
 enum class FrequencyBand {
@@ -59,10 +61,11 @@ object BeatDetectionEngine {
         if (pcm.isEmpty()) return BeatAnalysisResult(0.0, emptyList(), 0f)
 
         val filtered = applyBandFilter(pcm, sampleRate, config.band)
-        val energyFrames = computeFrameEnergies(filtered)
+        val rawEnergies = computeFrameEnergies(filtered)
 
-        if (energyFrames.isEmpty()) return BeatAnalysisResult(0.0, emptyList(), 0f)
+        if (rawEnergies.isEmpty()) return BeatAnalysisResult(0.0, emptyList(), 0f)
 
+        val energyFrames = smoothEnergies(rawEnergies, config.smoothing)
         val onsetFrames = detectOnsets(energyFrames, config)
         val markersMs = framesToMs(onsetFrames, sampleRate)
         val intervalFiltered = enforceMinInterval(markersMs, config.minIntervalMs)
@@ -75,7 +78,7 @@ object BeatDetectionEngine {
             .sorted()
 
         val bpm = estimateBpm(shifted)
-        val confidence = if (shifted.size >= 4) 0.8f else if (shifted.size >= 2) 0.5f else 0f
+        val confidence = calculateConfidence(shifted)
 
         return BeatAnalysisResult(bpm, shifted, confidence)
     }
@@ -172,6 +175,34 @@ object BeatDetectionEngine {
         return energies
     }
 
+    /**
+     * Exponential moving average over the energy envelope.
+     *
+     * [BeatDetectionConfig.smoothing] has a UI slider but used to be ignored by
+     * detection. Higher values weight history more, so isolated noise spikes stop
+     * registering as onsets. 0f keeps the raw envelope.
+     */
+    private fun smoothEnergies(energies: FloatArray, smoothing: Float): FloatArray {
+        val amount = smoothing.coerceIn(0f, 1f)
+        if (amount <= 0f || energies.size < 2) return energies
+
+        val smoothed = FloatArray(energies.size)
+        smoothed[0] = energies[0]
+        for (i in 1 until energies.size) {
+            smoothed[i] = smoothed[i - 1] * amount + energies[i] * (1f - amount)
+        }
+        return smoothed
+    }
+
+    /**
+     * Picks local energy peaks above an adaptive threshold.
+     *
+     * Requiring the frame to exceed both neighbours means one percussive hit
+     * yields one onset. The previous version flagged every frame above the
+     * threshold, so a hit spanning several frames produced a burst of onsets that
+     * only [enforceMinInterval] hid — which silently dropped real beats whenever
+     * `minIntervalMs` was set low.
+     */
     private fun detectOnsets(energies: FloatArray, config: BeatDetectionConfig): List<Int> {
         val onsets = mutableListOf<Int>()
         val historySize = HISTORY_FRAMES
@@ -179,13 +210,38 @@ object BeatDetectionEngine {
 
         for (frame in historySize until energies.size) {
             val localMean = energies.slice((frame - historySize) until frame).average().toFloat()
-            val current = energies[frame] * config.sensitivity
+            if (localMean <= 0f) continue
 
-            if (localMean > 0f && current > localMean * thresholdFactor) {
+            val current = energies[frame] * config.sensitivity
+            if (current <= localMean * thresholdFactor) continue
+
+            val previous = energies[frame - 1]
+            val next = energies.getOrElse(frame + 1) { 0f }
+            if (energies[frame] >= previous && energies[frame] >= next) {
                 onsets.add(frame)
             }
         }
         return onsets
+    }
+
+    /**
+     * Confidence from how regular the inter-onset intervals are.
+     *
+     * A steady grid scores near 1.0; scattered markers score low even when there
+     * are many of them. The previous count-based buckets rated any 4+ markers as
+     * 0.8 regardless of spacing.
+     */
+    private fun calculateConfidence(markers: List<Long>): Float {
+        if (markers.size < 2) return 0f
+
+        val intervals = markers.zipWithNext { a, b -> (b - a).toDouble() }.filter { it > 0.0 }
+        if (intervals.isEmpty()) return 0f
+
+        val mean = intervals.average()
+        if (mean <= 0.0) return 0f
+
+        val stdDev = sqrt(intervals.map { (it - mean).pow(2) }.average())
+        return (1.0 - stdDev / mean).toFloat().coerceIn(0f, 1f)
     }
 
     private fun framesToMs(frames: List<Int>, sampleRate: Int): List<Long> {

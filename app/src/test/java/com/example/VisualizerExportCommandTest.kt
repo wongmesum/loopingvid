@@ -202,6 +202,14 @@ class VisualizerExportCommandTest {
     }
 
     @Test
+    fun `at least ten beat effects are available`() {
+        assertTrue(
+            "Phase 8 requires >= 10 beat effects, got ${BeatEffect.entries.size}",
+            BeatEffect.entries.size >= 10
+        )
+    }
+
+    @Test
     fun `each beat effect maps to a distinct export filter`() {
         val filters = BeatEffect.entries.map { effect ->
             val args = VisualizerExportCommandBuilder.build(
@@ -216,6 +224,24 @@ class VisualizerExportCommandTest {
 
         assertEquals(BeatEffect.entries.size, filters.distinct().size)
         assertTrue(filters.all { it.contains("0.500") })
+    }
+
+    @Test
+    fun `every beat effect produces a non-null filter`() {
+        BeatEffect.entries.forEach { effect ->
+            val args = VisualizerExportCommandBuilder.build(
+                audioPath = audio,
+                outputPath = output,
+                config = VisualizerRenderConfig(),
+                beatMarkersMs = listOf(1000L),
+                beatEffectExpression = effect.name
+            )
+            val filter = args[args.indexOf("-filter_complex") + 1]
+            assertTrue(
+                "Effect ${effect.name} must emit an enable expression",
+                filter.contains("enable=")
+            )
+        }
     }
 
     @Test

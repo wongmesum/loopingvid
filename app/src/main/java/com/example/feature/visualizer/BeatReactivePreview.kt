@@ -84,6 +84,10 @@ private fun createBeatTransform(effect: BeatEffect, intensity: Float): BeatTrans
         translationY = sin(intensity * 31f) * 8f,
         rotation = sin(intensity * 18f) * 1.5f
     )
+    BeatEffect.WAVE_RIPPLE -> BeatTransform(
+        scale = 1f + intensity * 0.06f,
+        rotation = sin(intensity * 12f) * 0.8f
+    )
     else -> BeatTransform()
 }
 
@@ -105,6 +109,15 @@ private fun createReactiveConfig(
             topColor = lerpBeatColor(Color(0xFF0B0D12), config.primaryColor, intensity * 0.45f),
             bottomColor = lerpBeatColor(Color(0xFF131720), config.secondaryColor, intensity * 0.3f)
         )
+    )
+    BeatEffect.NEON_STROBE -> config.copy(
+        primaryColor = lerpBeatColor(config.primaryColor, Color.White, intensity * 0.55f),
+        secondaryColor = lerpBeatColor(config.secondaryColor, Color(0xFFFF3DCC), intensity * 0.45f),
+        glowRadius = config.glowRadius + intensity * 16f
+    )
+    BeatEffect.WAVE_RIPPLE -> config.copy(
+        sizeScale = config.sizeScale * (1f + intensity * 0.14f),
+        trailFade = (config.trailFade + intensity * 0.3f).coerceAtMost(1f)
     )
     else -> config
 }

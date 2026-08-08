@@ -83,6 +83,9 @@ fun VisualizerStudioScreen(
                 markersMs = uiState.beatSync.markersMs,
                 durationMs = uiState.beatSync.durationMs,
                 currentPositionMs = currentPositionMs,
+                bpm = uiState.beatSync.bpm,
+                gridDivision = uiState.beatSync.gridDivision,
+                offsetMs = uiState.beatSync.config.offsetMs,
                 onAddMarker = viewModel::addBeatMarker,
                 onMoveMarker = viewModel::moveBeatMarker,
                 onRemoveMarker = viewModel::removeBeatMarker
@@ -101,7 +104,9 @@ fun VisualizerStudioScreen(
                 onOffsetChange = viewModel::setBeatOffset,
                 onMinIntervalChange = viewModel::setBeatMinInterval,
                 onStrengthChange = viewModel::setBeatEffectStrength,
-                onEffectChange = viewModel::setSelectedBeatEffect
+                onEffectChange = viewModel::setSelectedBeatEffect,
+                onGridDivisionChange = viewModel::setBeatGridDivision,
+                onQuantizeMarkers = viewModel::quantizeBeatMarkers
             )
         }
 
