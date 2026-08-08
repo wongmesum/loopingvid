@@ -26,6 +26,8 @@ data class SlideshowUiState(
     val aspectRatio: String = "16:9",
     val resolution: String = "1080p",
     val outputName: String = "",
+    val kenBurnsEnabled: Boolean = false,
+    val overlayText: String = "",
     val jobProgress: JobProgressState = JobProgressState(),
     val validationMessage: String? = null
 ) {
@@ -110,6 +112,14 @@ class SlideshowViewModel(
         _uiState.value = _uiState.value.copy(outputName = name)
     }
 
+    fun setKenBurns(enabled: Boolean) {
+        _uiState.value = _uiState.value.copy(kenBurnsEnabled = enabled)
+    }
+
+    fun setOverlayText(text: String) {
+        _uiState.value = _uiState.value.copy(overlayText = text.take(MAX_OVERLAY_TEXT_LENGTH))
+    }
+
     fun renderSlideshow() {
         val state = _uiState.value
         if (state.images.isEmpty()) {
@@ -129,7 +139,9 @@ class SlideshowViewModel(
                         transitionDurationSec = state.transitionDurationSec,
                         resolution = state.resolution,
                         aspectRatio = state.aspectRatio,
-                        outputName = state.outputName
+                        outputName = state.outputName,
+                        kenBurnsEnabled = state.kenBurnsEnabled,
+                        overlayText = state.overlayText
                     )
                 )
             } catch (error: Exception) {
@@ -147,7 +159,14 @@ class SlideshowViewModel(
     }
 
     companion object {
-        val TRANSITIONS = listOf("fade", "wipeleft", "slideright", "circleopen", "none")
+        private const val MAX_OVERLAY_TEXT_LENGTH = 100
+
+        val TRANSITIONS = listOf(
+            "fade", "wipeleft", "slideright", "circleopen",
+            "wiperight", "wipeup", "wipedown", "slideleft",
+            "slideup", "slidedown", "dissolve",
+            "none"
+        )
         val ASPECT_RATIOS = listOf("16:9", "9:16", "1:1", "4:5")
         val RESOLUTIONS = listOf("480p", "720p", "1080p", "4K")
     }

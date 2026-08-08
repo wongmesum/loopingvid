@@ -1,6 +1,7 @@
 package com.example
 
 import com.example.core.ffmpeg.FFmpegCommandBuilder
+import com.example.feature.slideshow.SlideshowViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -117,6 +118,92 @@ class SlideshowCommandBuilderTest {
         val filterGraph = args[args.indexOf("-filter_complex") + 1]
         assertTrue("9:16 export should target a 1080 wide canvas", filterGraph.contains("1080"))
         assertTrue("9:16 export should target a 1920 tall canvas", filterGraph.contains("1920"))
+    }
+
+    @Test
+    fun `at least ten transition effects are available`() {
+        val effects = SlideshowViewModel.TRANSITIONS.filterNot { it == "none" }
+
+        assertTrue("Phase 9 requires at least 10 transition effects", effects.size >= 10)
+    }
+
+    @Test
+    fun `new transition is passed to xfade`() {
+        val args = FFmpegCommandBuilder.buildSlideshowCommand(
+            imagePaths = images,
+            outputPath = "/out/slideshow.mp4",
+            perImageDurationSec = 3.0,
+            transition = "wiperight"
+        )
+
+        val filterGraph = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(filterGraph.contains("transition=wiperight"))
+    }
+
+    @Test
+    fun `ken burns enabled emits zoompan filter`() {
+        val args = FFmpegCommandBuilder.buildSlideshowCommand(
+            imagePaths = images,
+            outputPath = "/out/slideshow.mp4",
+            perImageDurationSec = 3.0,
+            kenBurnsEnabled = true
+        )
+
+        val filterGraph = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(filterGraph.contains("zoompan="))
+    }
+
+    @Test
+    fun `ken burns disabled keeps static image filter`() {
+        val args = FFmpegCommandBuilder.buildSlideshowCommand(
+            imagePaths = images,
+            outputPath = "/out/slideshow.mp4",
+            perImageDurationSec = 3.0,
+            kenBurnsEnabled = false
+        )
+
+        val filterGraph = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(!filterGraph.contains("zoompan="))
+    }
+
+    @Test
+    fun `overlay text emits drawtext filter`() {
+        val args = FFmpegCommandBuilder.buildSlideshowCommand(
+            imagePaths = images,
+            outputPath = "/out/slideshow.mp4",
+            perImageDurationSec = 3.0,
+            overlayText = "Summer memories"
+        )
+
+        val filterGraph = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(filterGraph.contains("drawtext=text='Summer memories'"))
+        assertTrue(args.contains("[textout]"))
+    }
+
+    @Test
+    fun `empty overlay text skips drawtext filter`() {
+        val args = FFmpegCommandBuilder.buildSlideshowCommand(
+            imagePaths = images,
+            outputPath = "/out/slideshow.mp4",
+            perImageDurationSec = 3.0,
+            overlayText = ""
+        )
+
+        val filterGraph = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(!filterGraph.contains("drawtext="))
+    }
+
+    @Test
+    fun `overlay text escapes ffmpeg special characters`() {
+        val args = FFmpegCommandBuilder.buildSlideshowCommand(
+            imagePaths = images,
+            outputPath = "/out/slideshow.mp4",
+            perImageDurationSec = 3.0,
+            overlayText = "It's 10:30"
+        )
+
+        val filterGraph = args[args.indexOf("-filter_complex") + 1]
+        assertTrue(filterGraph.contains("It\\'s 10\\:30"))
     }
 
     @Test(expected = IllegalArgumentException::class)

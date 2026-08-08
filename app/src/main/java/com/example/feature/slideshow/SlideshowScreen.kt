@@ -39,6 +39,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -143,9 +144,13 @@ fun SlideshowScreen(
             transition = uiState.transition,
             aspectRatio = uiState.aspectRatio,
             resolution = uiState.resolution,
+            kenBurnsEnabled = uiState.kenBurnsEnabled,
+            overlayText = uiState.overlayText,
             onTransitionChange = viewModel::setTransition,
             onAspectRatioChange = viewModel::setAspectRatio,
-            onResolutionChange = viewModel::setResolution
+            onResolutionChange = viewModel::setResolution,
+            onKenBurnsChange = viewModel::setKenBurns,
+            onOverlayTextChange = viewModel::setOverlayText
         )
 
         OutlinedTextField(
@@ -392,9 +397,13 @@ private fun SlideshowStyleControls(
     transition: String,
     aspectRatio: String,
     resolution: String,
+    kenBurnsEnabled: Boolean,
+    overlayText: String,
     onTransitionChange: (String) -> Unit,
     onAspectRatioChange: (String) -> Unit,
-    onResolutionChange: (String) -> Unit
+    onResolutionChange: (String) -> Unit,
+    onKenBurnsChange: (Boolean) -> Unit,
+    onOverlayTextChange: (String) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -424,6 +433,27 @@ private fun SlideshowStyleControls(
                 selected = resolution,
                 onSelect = onResolutionChange,
                 tagPrefix = "slideshow_resolution"
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.testTag("slideshow_ken_burns_row")
+            ) {
+                Text("Ken Burns (zoom)", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = kenBurnsEnabled,
+                    onCheckedChange = onKenBurnsChange,
+                    modifier = Modifier.testTag("slideshow_ken_burns_switch")
+                )
+            }
+
+            OutlinedTextField(
+                value = overlayText,
+                onValueChange = onOverlayTextChange,
+                label = { Text("Teks overlay (opsional)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("slideshow_overlay_text")
             )
         }
     }

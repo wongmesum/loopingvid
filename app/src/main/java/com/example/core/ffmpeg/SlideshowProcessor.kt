@@ -90,7 +90,9 @@ class SlideshowProcessor(
             audioPath = request.audioUri,
             resolution = request.resolution,
             aspectRatio = request.aspectRatio,
-            frameRate = request.frameRate
+            frameRate = request.frameRate,
+            kenBurnsEnabled = request.kenBurnsEnabled,
+            overlayText = request.overlayText
         )
         val exitCode = ffmpegWrapper.execute(command) { progress ->
             updateProgress(initialJob, jobId, progress)
@@ -184,5 +186,7 @@ data class SlideshowRenderRequest(
     val resolution: String = "1080p",
     val aspectRatio: String = "16:9",
     val frameRate: String = "30fps",
-    val outputName: String = ""
+    val outputName: String = "",
+    val kenBurnsEnabled: Boolean = false,
+    val overlayText: String = ""
 )
