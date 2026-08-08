@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Close
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.filled.Queue
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.StopCircle
 import androidx.compose.material.icons.filled.VideoLibrary
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -55,7 +53,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.core.work.BatchExportRequest
 import com.example.core.work.ExportQueueUiState
 import com.example.core.work.ExportQueueViewModel
 import com.example.core.work.QueueItemUiState
@@ -190,41 +187,6 @@ fun ExportQueueCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = {
-                        val sampleBatch = listOf(
-                            BatchExportRequest(
-                                title = "Project_Intro_1080p",
-                                jobType = "EDITOR",
-                                format = "mp4",
-                                destinationFolder = "Movies"
-                            ),
-                            BatchExportRequest(
-                                title = "Loop_Cinematic_Pro",
-                                jobType = "LOOP",
-                                format = "mkv",
-                                destinationFolder = "Movies"
-                            ),
-                            BatchExportRequest(
-                                title = "Mastered_Audio_Mix",
-                                jobType = "MASTERING",
-                                format = "mp3",
-                                destinationFolder = "Music"
-                            )
-                        )
-                        queueViewModel.enqueueBatchProjects(sampleBatch)
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("enqueue_batch_button"),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Enqueue Batch")
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Enqueue 3 Projects", style = MaterialTheme.typography.labelLarge)
-                }
-
                 if (uiState.items.isNotEmpty()) {
                     OutlinedButton(
                         onClick = { queueViewModel.clearCompletedJobs() },

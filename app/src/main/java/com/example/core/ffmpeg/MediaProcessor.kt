@@ -65,7 +65,8 @@ class MediaProcessor(
         resolution: String = "1080p",
         frameRate: String = "30fps",
         bitrate: String = "Medium",
-        aspectRatio: String = "Asli"
+        aspectRatio: String = "Asli",
+        projectId: Long? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
         val folderName = destinationFolder ?: "RenderOutput"
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
@@ -85,7 +86,8 @@ class MediaProcessor(
             progress = 0,
             durationSec = targetDurationSec,
             fileSizeMb = 0.0,
-            paramsSummary = "Quality: $presetQuality, Mute: $muteAudio, Duration: ${targetDurationSec}s"
+            paramsSummary = "Quality: $presetQuality, Mute: $muteAudio, Duration: ${targetDurationSec}s",
+            projectId = projectId
         )
 
         val insertedId = repository.saveJob(initialJob)
@@ -345,7 +347,8 @@ class MediaProcessor(
         autoLevelingTargetLufs: Float = -14.0f,
         fadeInSec: Float = 0f,
         fadeOutSec: Float = 0f,
-        audioMetadata: com.example.core.media.AudioMetadata? = null
+        audioMetadata: com.example.core.media.AudioMetadata? = null,
+        projectId: Long? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
         val folderName = destinationFolder ?: "MasteringOutput"
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
@@ -366,7 +369,8 @@ class MediaProcessor(
             progress = 0,
             durationSec = 180.0,
             fileSizeMb = 0.0,
-            paramsSummary = "Preset: $presetName, Target: ${targetLufs} LUFS, Format: $exportFormat, FFT Noise Red: ${if (isNoiseReductionEnabled) "${noiseReductionDb.toInt()}dB" else "OFF"}$fadeSummary"
+            paramsSummary = "Preset: $presetName, Target: ${targetLufs} LUFS, Format: $exportFormat, FFT Noise Red: ${if (isNoiseReductionEnabled) "${noiseReductionDb.toInt()}dB" else "OFF"}$fadeSummary",
+            projectId = projectId
         )
 
         val insertedId = repository.saveJob(initialJob)
@@ -581,7 +585,8 @@ class MediaProcessor(
         resolution: String = "1080p",
         frameRate: String = "30fps",
         bitrate: String = "Medium",
-        aspectRatio: String = "Asli"
+        aspectRatio: String = "Asli",
+        projectId: Long? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
         val folderName = destinationFolder ?: "EditorOutput"
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
@@ -601,7 +606,8 @@ class MediaProcessor(
             progress = 0,
             durationSec = 60.0,
             fileSizeMb = 0.0,
-            paramsSummary = "Text: '$titleText', Spectrum: $spectrumStyle, Quality: $presetQuality, Filter: ${filterString?.ifBlank { "None" } ?: "None"}"
+            paramsSummary = "Text: '$titleText', Spectrum: $spectrumStyle, Quality: $presetQuality, Filter: ${filterString?.ifBlank { "None" } ?: "None"}",
+            projectId = projectId
         )
 
         val insertedId = repository.saveJob(initialJob)

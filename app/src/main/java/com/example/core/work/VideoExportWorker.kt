@@ -7,12 +7,9 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.core.database.AppDatabase
 import com.example.core.database.LoopingVidRepository
-import com.example.core.database.RenderJobEntity
 import com.example.core.ffmpeg.MediaProcessor
-import com.example.core.utils.MediaStoreExporter
-import kotlinx.coroutines.delay
+import com.example.feature.project.ProjectLifecycleManager
 import kotlinx.coroutines.launch
-import java.io.File
 
 class VideoExportWorker(
     appContext: Context,
@@ -50,6 +47,10 @@ class VideoExportWorker(
         const val KEY_FADE_IN_SEC = "KEY_FADE_IN_SEC"
         const val KEY_FADE_OUT_SEC = "KEY_FADE_OUT_SEC"
 
+        // WorkManager Data has no nullable Long slot, so absence is encoded as NO_PROJECT_ID.
+        const val KEY_PROJECT_ID = "KEY_PROJECT_ID"
+        const val NO_PROJECT_ID = -1L
+
         const val KEY_PROGRESS = "KEY_PROGRESS"
         const val KEY_STATUS = "KEY_STATUS"
         const val KEY_GALLERY_URI = "KEY_GALLERY_URI"
@@ -81,12 +82,19 @@ class VideoExportWorker(
         val bitrateStr = inputData.getString(KEY_BITRATE) ?: "Medium"
         val aspectRatioStr = inputData.getString(KEY_ASPECT_RATIO) ?: "Asli"
 
+        val projectId = inputData.getLong(KEY_PROJECT_ID, NO_PROJECT_ID).takeIf { it > 0L }
+
+        val database = AppDatabase.getDatabase(context)
         val repository = LoopingVidRepository(
-            AppDatabase.getDatabase(context).renderJobDao(),
-            AppDatabase.getDatabase(context).liveSessionDao(),
-            AppDatabase.getDatabase(context).appSettingDao()
+            database.renderJobDao(),
+            database.liveSessionDao(),
+            database.appSettingDao(),
+            projectDao = database.projectDao()
         )
         val mediaProcessor = MediaProcessor(context, repository)
+        val projectLifecycleManager = ProjectLifecycleManager(repository)
+
+        projectLifecycleManager.markRendering(projectId)
 
         val progressCollectorJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
             mediaProcessor.progressState.collect { progressState ->
@@ -117,7 +125,8 @@ class VideoExportWorker(
                         resolution = resolutionStr,
                         frameRate = frameRateStr,
                         bitrate = bitrateStr,
-                        aspectRatio = aspectRatioStr
+                        aspectRatio = aspectRatioStr,
+                        projectId = projectId
                     )
                 }
                 "MASTERING" -> {
@@ -134,7 +143,8 @@ class VideoExportWorker(
                         isAutoLevelingEnabled = inputData.getBoolean(KEY_AUTO_LEVELING_ENABLED, false),
                         autoLevelingTargetLufs = inputData.getFloat(KEY_AUTO_LEVELING_TARGET_LUFS, -14.0f),
                         fadeInSec = inputData.getFloat(KEY_FADE_IN_SEC, 0f),
-                        fadeOutSec = inputData.getFloat(KEY_FADE_OUT_SEC, 0f)
+                        fadeOutSec = inputData.getFloat(KEY_FADE_OUT_SEC, 0f),
+                        projectId = projectId
                     )
                 }
                 else -> { // "EDITOR" or others
@@ -154,12 +164,14 @@ class VideoExportWorker(
                         resolution = resolutionStr,
                         frameRate = frameRateStr,
                         bitrate = bitrateStr,
-                        aspectRatio = aspectRatioStr
+                        aspectRatio = aspectRatioStr,
+                        projectId = projectId
                     )
                 }
             }
 
             progressCollectorJob.cancel()
+            projectLifecycleManager.markCompleted(projectId)
             val galleryUri = Uri.parse(resultJobEntity.outputUri ?: "")
 
             return Result.success(
@@ -167,11 +179,15 @@ class VideoExportWorker(
                     KEY_PROGRESS to 100,
                     KEY_STATUS to "Export complete",
                     KEY_GALLERY_URI to galleryUri.toString(),
-                    KEY_PROJECT_TITLE to title
+                    KEY_PROJECT_TITLE to title,
+                    KEY_JOB_TYPE to jobType,
+                    KEY_EXPORT_FORMAT to format,
+                    KEY_DESTINATION_FOLDER to folder
                 )
             )
         } catch (e: Exception) {
             progressCollectorJob.cancel()
+            projectLifecycleManager.markFailed(projectId)
             this@VideoExportWorker.setProgress(workDataOf(KEY_PROGRESS to 0, KEY_STATUS to "Export failed: ${e.localizedMessage}"))
             return Result.failure(workDataOf(KEY_ERROR to (e.localizedMessage ?: "Unknown export error")))
         }

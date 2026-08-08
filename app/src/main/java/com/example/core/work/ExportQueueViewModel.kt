@@ -74,7 +74,8 @@ data class BatchExportRequest(
     val isAutoLevelingEnabled: Boolean = false,
     val autoLevelingTargetLufs: Float = -14.0f,
     val fadeInSec: Float = 0f,
-    val fadeOutSec: Float = 0f
+    val fadeOutSec: Float = 0f,
+    val projectId: Long? = null
 )
 
 class ExportQueueViewModel(
@@ -243,7 +244,8 @@ class ExportQueueViewModel(
             VideoExportWorker.KEY_AUTO_LEVELING_ENABLED to request.isAutoLevelingEnabled,
             VideoExportWorker.KEY_AUTO_LEVELING_TARGET_LUFS to request.autoLevelingTargetLufs,
             VideoExportWorker.KEY_FADE_IN_SEC to request.fadeInSec,
-            VideoExportWorker.KEY_FADE_OUT_SEC to request.fadeOutSec
+            VideoExportWorker.KEY_FADE_OUT_SEC to request.fadeOutSec,
+            VideoExportWorker.KEY_PROJECT_ID to (request.projectId ?: VideoExportWorker.NO_PROJECT_ID)
         )
     }
 
