@@ -5,6 +5,7 @@ import android.net.Uri
 import com.example.core.database.LoopingVidRepository
 import com.example.core.database.RenderJobEntity
 import com.example.core.utils.MediaStoreExporter
+import com.example.core.utils.SanitizationUtil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,12 +69,13 @@ class MediaProcessor(
         aspectRatio: String = "Asli",
         projectId: Long? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
-        val folderName = destinationFolder ?: "RenderOutput"
+        val folderName = SanitizationUtil.sanitizeFolderPath(destinationFolder ?: "RenderOutput", "RenderOutput")
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
         if (!outputDir.exists()) outputDir.mkdirs()
 
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val name = customFileName?.takeIf { it.isNotBlank() } ?: "Loop_${loopStyle.lowercase()}_$timeStamp"
+        val defaultName = "Loop_${loopStyle.lowercase()}_$timeStamp"
+        val name = SanitizationUtil.sanitizeFileName(customFileName?.takeIf { it.isNotBlank() } ?: defaultName, defaultName)
         val outputFile = File(outputDir, "$name.${exportFormat.lowercase()}")
 
         val initialJob = RenderJobEntity(
@@ -243,12 +245,13 @@ class MediaProcessor(
         customFileName: String? = null,
         destinationFolder: String? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
-        val folderName = destinationFolder ?: "MasteringOutput"
+        val folderName = SanitizationUtil.sanitizeFolderPath(destinationFolder ?: "MasteringOutput", "MasteringOutput")
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
         if (!outputDir.exists()) outputDir.mkdirs()
 
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val name = customFileName?.takeIf { it.isNotBlank() } ?: "Normalized_$timeStamp"
+        val defaultName = "Normalized_$timeStamp"
+        val name = SanitizationUtil.sanitizeFileName(customFileName?.takeIf { it.isNotBlank() } ?: defaultName, defaultName)
         val outputFile = File(outputDir, "$name.${exportFormat.lowercase()}")
 
         val initialJob = RenderJobEntity(
@@ -350,12 +353,13 @@ class MediaProcessor(
         audioMetadata: com.example.core.media.AudioMetadata? = null,
         projectId: Long? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
-        val folderName = destinationFolder ?: "MasteringOutput"
+        val folderName = SanitizationUtil.sanitizeFolderPath(destinationFolder ?: "MasteringOutput", "MasteringOutput")
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
         if (!outputDir.exists()) outputDir.mkdirs()
 
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val name = customFileName?.takeIf { it.isNotBlank() } ?: "Mastered_${presetName.replace(" ", "_")}_$timeStamp"
+        val defaultName = "Mastered_${presetName.replace(" ", "_")}_$timeStamp"
+        val name = SanitizationUtil.sanitizeFileName(customFileName?.takeIf { it.isNotBlank() } ?: defaultName, defaultName)
         val outputFile = File(outputDir, "$name.${exportFormat.lowercase()}")
 
         val fadeSummary = if (fadeInSec > 0f || fadeOutSec > 0f) ", Fades: in ${fadeInSec}s / out ${fadeOutSec}s" else ""
@@ -467,12 +471,13 @@ class MediaProcessor(
         bitrate: String = "Medium",
         aspectRatio: String = "Asli"
     ): RenderJobEntity = withContext(Dispatchers.IO) {
-        val folderName = destinationFolder ?: "MasteredVideos"
+        val folderName = SanitizationUtil.sanitizeFolderPath(destinationFolder ?: "MasteredVideos", "MasteredVideos")
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
         if (!outputDir.exists()) outputDir.mkdirs()
 
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val name = customFileName?.takeIf { it.isNotBlank() } ?: "TrimMastered_${presetName.replace(" ", "_")}_$timeStamp"
+        val defaultName = "TrimMastered_${presetName.replace(" ", "_")}_$timeStamp"
+        val name = SanitizationUtil.sanitizeFileName(customFileName?.takeIf { it.isNotBlank() } ?: defaultName, defaultName)
         val outputFile = File(outputDir, "$name.${exportFormat.lowercase()}")
 
         val initialJob = RenderJobEntity(
@@ -588,12 +593,13 @@ class MediaProcessor(
         aspectRatio: String = "Asli",
         projectId: Long? = null
     ): RenderJobEntity = withContext(Dispatchers.IO) {
-        val folderName = destinationFolder ?: "EditorOutput"
+        val folderName = SanitizationUtil.sanitizeFolderPath(destinationFolder ?: "EditorOutput", "EditorOutput")
         val outputDir = File(context.getExternalFilesDir(null) ?: context.filesDir, folderName)
         if (!outputDir.exists()) outputDir.mkdirs()
 
         val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-        val name = customFileName?.takeIf { it.isNotBlank() } ?: "Editor_Project_$timeStamp"
+        val defaultName = "Editor_Project_$timeStamp"
+        val name = SanitizationUtil.sanitizeFileName(customFileName?.takeIf { it.isNotBlank() } ?: defaultName, defaultName)
         val outputFile = File(outputDir, "$name.${exportFormat.lowercase()}")
 
         val initialJob = RenderJobEntity(

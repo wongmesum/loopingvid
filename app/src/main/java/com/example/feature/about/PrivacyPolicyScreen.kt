@@ -198,7 +198,7 @@ fun PrivacyPolicyScreen(
                     )
                     BulletPoint(
                         title = "Data Kredensial RTMP & API Key",
-                        description = "Kunci streaming RTMP (YouTube Live, TikTok Live) dan API Key Gemini disimpan di penyimpanan terenkripsi lokal (Encrypted SharedPreferences) dan tidak pernah dikirimkan ke pihak ketiga."
+                        description = "Kunci streaming RTMP (YouTube Live, TikTok Live) dan API Key Gemini disimpan di basis data lokal aplikasi dan tidak pernah dikirimkan ke pihak ketiga. Penyimpanan ini belum dienkripsi, namun pencadangan otomatis (adb backup) sudah dinonaktifkan sehingga isinya tidak dapat diekstrak dari perangkat."
                     )
                     BulletPoint(
                         title = "Log Performa & Analitik Anonim",

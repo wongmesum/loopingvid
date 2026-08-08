@@ -12,6 +12,7 @@ import com.example.core.utils.StorageWatcher
 import com.example.core.utils.ThermalInfo
 import com.example.core.utils.ThermalMonitor
 import com.example.core.utils.ThermalStatusLevel
+import com.example.core.utils.RtmpUrlValidator
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -282,6 +283,12 @@ class LiveViewModel(
 
     fun updateStreamKey(key: String) {
         _uiState.value = _uiState.value.copy(streamKey = key)
+
+        // A blank key is a deliberate "forget my credential" action, so it must reach storage.
+        // Only a malformed non-blank key is dropped, which also avoids persisting the partial
+        // values produced while the user is still typing.
+        if (key.isNotBlank() && !RtmpUrlValidator.validateStreamKey(key).isValid) return
+
         viewModelScope.launch {
             repository.setSetting("stream_key_${_uiState.value.platform.name.lowercase()}", key)
         }
@@ -613,6 +620,16 @@ class LiveViewModel(
                     level = LiveLogLevel.WARN,
                     category = LiveLogCategory.RTMP,
                     message = "Start live stream skipped: No video media source selected."
+                )
+                return
+            }
+
+            val urlValidation = RtmpUrlValidator.validateRtmpUrl(state.rtmpUrl)
+            if (!urlValidation.isValid) {
+                addLog(
+                    level = LiveLogLevel.ERROR,
+                    category = LiveLogCategory.RTMP,
+                    message = "Start live stream skipped: ${urlValidation.errorMessage ?: "Invalid RTMP URL"}"
                 )
                 return
             }

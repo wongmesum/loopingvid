@@ -24,8 +24,16 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,7 +49,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +68,9 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    var isYoutubeKeyVisible by remember { mutableStateOf(false) }
+    var isTiktokKeyVisible by remember { mutableStateOf(false) }
+    var isGeminiKeyVisible by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -273,6 +283,19 @@ fun SettingsScreen(
                     value = uiState.youtubeStreamKey,
                     onValueChange = { viewModel.updateYoutubeKey(it) },
                     label = { Text("Saved YouTube Stream Key") },
+                    visualTransformation = if (isYoutubeKeyVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { isYoutubeKeyVisible = !isYoutubeKeyVisible }) {
+                            Icon(
+                                imageVector = if (isYoutubeKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (isYoutubeKeyVisible) "Sembunyikan YouTube stream key" else "Tampilkan YouTube stream key"
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("youtube_key_settings_input"),
@@ -283,6 +306,19 @@ fun SettingsScreen(
                     value = uiState.tiktokStreamKey,
                     onValueChange = { viewModel.updateTiktokKey(it) },
                     label = { Text("Saved TikTok RTMP Stream Key") },
+                    visualTransformation = if (isTiktokKeyVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { isTiktokKeyVisible = !isTiktokKeyVisible }) {
+                            Icon(
+                                imageVector = if (isTiktokKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (isTiktokKeyVisible) "Sembunyikan TikTok stream key" else "Tampilkan TikTok stream key"
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("tiktok_key_settings_input"),
@@ -293,6 +329,19 @@ fun SettingsScreen(
                     value = uiState.geminiApiKey,
                     onValueChange = { viewModel.updateGeminiKey(it) },
                     label = { Text("Gemini API Key (Optional AI Transcription)") },
+                    visualTransformation = if (isGeminiKeyVisible) {
+                        VisualTransformation.None
+                    } else {
+                        PasswordVisualTransformation()
+                    },
+                    trailingIcon = {
+                        IconButton(onClick = { isGeminiKeyVisible = !isGeminiKeyVisible }) {
+                            Icon(
+                                imageVector = if (isGeminiKeyVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = if (isGeminiKeyVisible) "Sembunyikan Gemini API key" else "Tampilkan Gemini API key"
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("gemini_key_settings_input"),
