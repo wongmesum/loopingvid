@@ -55,6 +55,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
     onNavigateToSupport: () -> Unit = {},
+    onNavigateToDiagnostics: () -> Unit = {},
     onRestartOnboarding: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -362,7 +363,7 @@ fun SettingsScreen(
 
         // Device System Capabilities
         Card(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("settings_device_capabilities_card"),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -378,10 +379,14 @@ fun SettingsScreen(
                     Text("Device Capabilities", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                 }
 
-                Text("• Video Encoder: Hardware H.264 / AVC (Up to 1080p 60FPS)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("• Audio Encoder: AAC-LC 192kbps stereo", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("• Database: SQLite Room Persistence active", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("• Foreground Service: Active for background RTMP live streaming", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("View hardware limits, thermal status, memory, and detected video encoders.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                FilledTonalButton(
+                    onClick = onNavigateToDiagnostics,
+                    modifier = Modifier.fillMaxWidth().testTag("settings_open_diagnostics_button")
+                ) {
+                    Text("Buka Diagnostik Perangkat")
+                }
             }
         }
     }

@@ -19,6 +19,7 @@ import com.example.feature.about.PrivacyPolicyScreen
 import com.example.feature.about.SupportProjectScreen
 import com.example.feature.editor.EditorScreen
 import com.example.feature.editor.EditorViewModel
+import com.example.feature.diagnostics.DeviceDiagnosticsScreen
 import com.example.feature.guide.GuideScreen
 import com.example.feature.history.HistoryScreen
 import com.example.feature.history.HistoryViewModel
@@ -132,6 +133,7 @@ fun AppNavHost(
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToAbout = { navController.navigate(NavDestination.About.route) },
                 onNavigateToSupport = { navController.navigate(NavDestination.SupportProject.route) },
+                onNavigateToDiagnostics = { navController.navigate(NavDestination.DeviceDiagnostics.route) },
                 onRestartOnboarding = onStartOnboarding
             )
         }
@@ -154,6 +156,9 @@ fun AppNavHost(
         }
         composable(NavDestination.SupportProject.route) {
             SupportProjectScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(NavDestination.DeviceDiagnostics.route) {
+            DeviceDiagnosticsScreen(onNavigateBack = { navController.popBackStack() })
         }
     }
 }

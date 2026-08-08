@@ -6,6 +6,7 @@ import android.content.IntentFilter
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
+import java.util.Locale
 
 /**
  * Thermal Status Levels representing device thermal state during video encoding.
@@ -86,7 +87,7 @@ object ThermalMonitor {
         val warning = when (level) {
             ThermalStatusLevel.CRITICAL -> "CRITICAL OVERHEATING! Video encoder thermal limit reached. Frame drops and stream stalling likely."
             ThermalStatusLevel.SEVERE -> "Severe device heating detected during stream encoding. Hardware thermal throttling active."
-            ThermalStatusLevel.MODERATE -> "Device temperature elevated (${"%.1f".format(tempCelsius)}°C). Performance may degrade."
+            ThermalStatusLevel.MODERATE -> "Device temperature elevated (${String.format(Locale.US, "%.1f", tempCelsius)}°C). Performance may degrade."
             ThermalStatusLevel.WARM -> null
             ThermalStatusLevel.NORMAL -> null
         }
