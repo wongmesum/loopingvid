@@ -2,7 +2,7 @@
 
 All notable changes to LoopingVid are documented in this file.
 
-## [1.1.0] - 2026-08-08 (Release Candidate)
+## [1.1.0-rc1] - 2026-08-08 (Release Candidate)
 
 Stabilization release. The focus was making existing features real and verifiable
 rather than adding new surface area.

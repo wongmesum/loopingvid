@@ -241,6 +241,7 @@ fun VideoPlayer(
 /**
  * Overload for VideoPlayer receiving Uri object directly.
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun VideoPlayer(
     mediaUri: Uri?,

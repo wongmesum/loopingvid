@@ -19,6 +19,13 @@ debug.keystore
 *.jks
 *.keystore
 
+# AI agent scratch artifacts, local logs, and temporary patches.
+# These are developer-local by nature and must not travel with a release branch.
+.bob/
+.claude/worktrees/
+logs/
+*.patch
+
 # Crash dumps
 hs_err_pid*.log
 hs_err_pid*.mdmp
