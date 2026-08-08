@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.West
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.ui.graphics.vector.ImageVector
+import java.util.Locale
 
 enum class TransitionEffect(
     val displayName: String,
@@ -99,7 +100,7 @@ data class SegmentTransitionConfig(
             val nextTag = "[${i + 1}:v]"
             val outTag = if (i == segments.size - 2) "[v_out]" else "[v_xfade_${i + 1}]"
 
-            filterParts.add("${inTag}${nextTag}xfade=transition=${transEffect.xfadeName}:duration=${String.format("%.1f", transDur)}:offset=${String.format("%.1f", offset)}${outTag}")
+            filterParts.add("${inTag}${nextTag}xfade=transition=${transEffect.xfadeName}:duration=${String.format(Locale.US, "%.1f", transDur)}:offset=${String.format(Locale.US, "%.1f", offset)}${outTag}")
 
             cumulativeOffset = offset + nextSeg.totalEffectiveDurationSec
         }

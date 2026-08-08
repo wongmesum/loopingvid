@@ -108,7 +108,7 @@ dependencies {
   implementation(libs.androidx.compose.ui.graphics)
   implementation(libs.androidx.compose.ui.tooling.preview)
   implementation(libs.androidx.core.ktx)
-  // implementation(libs.androidx.datastore.preferences)
+  implementation(libs.androidx.datastore.preferences)
   implementation(libs.androidx.lifecycle.runtime.compose)
   implementation(libs.androidx.lifecycle.runtime.ktx)
   implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -148,6 +148,7 @@ dependencies {
   testImplementation(libs.androidx.junit)
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
+  testImplementation(libs.mockk)
   testImplementation(libs.robolectric)
   testImplementation(libs.roborazzi)
   testImplementation(libs.roborazzi.compose)
@@ -187,14 +188,20 @@ tasks.register<JacocoReport>("jacocoTestReport") {
     "**/generated/**"
   )
   
-  val debugTree = fileTree("${project.buildDir}/tmp/kotlin-classes/debug") {
-    exclude(fileFilter)
+  // Kotlin class output moved between AGP/Kotlin versions, so collect every known location
+  // instead of a single hardcoded path (an empty tree silently produces a 0-class report).
+  val kotlinClassDirs = listOf(
+    "${project.buildDir}/tmp/kotlin-classes/debug",
+    "${project.buildDir}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes",
+    "${project.buildDir}/intermediates/javac/debug/classes"
+  ).map { path ->
+    fileTree(path) { exclude(fileFilter) }
   }
-  
+
   val mainSrc = "${project.projectDir}/src/main/java"
-  
+
   sourceDirectories.setFrom(files(mainSrc))
-  classDirectories.setFrom(files(debugTree))
+  classDirectories.setFrom(files(kotlinClassDirs))
   executionData.setFrom(fileTree(project.buildDir) {
     include("jacoco/testDebugUnitTest.exec")
   })

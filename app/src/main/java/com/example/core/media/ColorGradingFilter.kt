@@ -1,6 +1,7 @@
 package com.example.core.media
 
 import androidx.compose.ui.graphics.ColorMatrix
+import java.util.Locale
 
 enum class ColorFilterPreset(
     val id: String,
@@ -84,13 +85,13 @@ data class ColorGradingConfig(
         // Add fine-tuning eq parameters if modified
         val eqParams = mutableListOf<String>()
         if (brightness != 0f) {
-            eqParams.add("brightness=%.2f".format(brightness))
+            eqParams.add(String.format(Locale.US, "brightness=%.2f", brightness))
         }
         if (contrast != 1.0f) {
-            eqParams.add("contrast=%.2f".format(contrast))
+            eqParams.add(String.format(Locale.US, "contrast=%.2f", contrast))
         }
         if (saturation != 1.0f && preset != ColorFilterPreset.GRAYSCALE) {
-            eqParams.add("saturation=%.2f".format(saturation))
+            eqParams.add(String.format(Locale.US, "saturation=%.2f", saturation))
         }
 
         if (eqParams.isNotEmpty()) {
@@ -98,7 +99,7 @@ data class ColorGradingConfig(
         }
 
         if (hue != 0f && preset != ColorFilterPreset.CYBERPUNK) {
-            parts.add("hue=h=%.1f".format(hue))
+            parts.add(String.format(Locale.US, "hue=h=%.1f", hue))
         }
 
         return parts.joinToString(",")
