@@ -7,6 +7,7 @@ plugins {
   alias(libs.plugins.roborazzi)
   alias(libs.plugins.secrets)
   alias(libs.plugins.google.services)
+  jacoco
 }
 
 android {
@@ -56,7 +57,17 @@ android {
     compose = true
     buildConfig = true
   }
-  testOptions { unitTests { isIncludeAndroidResources = true } }
+  testOptions {
+    unitTests {
+      isIncludeAndroidResources = true
+      all {
+        it.extensions.configure(JacocoTaskExtension::class.java) {
+          isIncludeNoLocationClasses = true
+          excludes = listOf("jdk.internal.*")
+        }
+      }
+    }
+  }
 
   // MigrationTestHelper loads the exported schema JSON from the test assets,
   // so the KSP output directory has to be visible to both test source sets.
@@ -153,3 +164,39 @@ dependencies {
   androidTestImplementation(libs.androidx.room.testing)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+
+// JaCoCo coverage configuration
+tasks.register<JacocoReport>("jacocoTestReport") {
+  dependsOn("testDebugUnitTest")
+  
+  reports {
+    xml.required.set(true)
+    html.required.set(true)
+    csv.required.set(false)
+  }
+  
+  val fileFilter = listOf(
+    "**/R.class",
+    "**/R$*.class",
+    "**/BuildConfig.*",
+    "**/Manifest*.*",
+    "**/*Test*.*",
+    "android/**/*.*",
+    "**/databinding/**",
+    "**/generated/**"
+  )
+  
+  val debugTree = fileTree("${project.buildDir}/tmp/kotlin-classes/debug") {
+    exclude(fileFilter)
+  }
+  
+  val mainSrc = "${project.projectDir}/src/main/java"
+  
+  sourceDirectories.setFrom(files(mainSrc))
+  classDirectories.setFrom(files(debugTree))
+  executionData.setFrom(fileTree(project.buildDir) {
+    include("jacoco/testDebugUnitTest.exec")
+  })
+}
+
