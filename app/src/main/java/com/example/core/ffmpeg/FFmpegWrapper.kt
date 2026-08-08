@@ -50,6 +50,9 @@ interface FFmpegWrapper {
  */
 object FFmpegCommandBuilder {
 
+    private const val KEN_BURNS_ZOOM_STEP = "0.0015"
+    private const val KEN_BURNS_MAX_ZOOM = "1.5"
+
     fun buildPreciseTrimCommand(
         inputPath: String,
         outputPath: String,
@@ -392,7 +395,9 @@ object FFmpegCommandBuilder {
         audioPath: String? = null,
         resolution: String = "1080p",
         aspectRatio: String = "16:9",
-        frameRate: String = "30fps"
+        frameRate: String = "30fps",
+        kenBurnsEnabled: Boolean = false,
+        overlayText: String = ""
     ): List<String> {
         require(imagePaths.isNotEmpty()) { "Slideshow requires at least one image" }
 
@@ -427,18 +432,34 @@ object FFmpegCommandBuilder {
         }
 
         val fps = frameRate.replace("fps", "").ifBlank { "30" }
-        val scaleFilter = "scale=w=$canvasWidth:h=$canvasHeight:force_original_aspect_ratio=decrease," +
-            "pad=$canvasWidth:$canvasHeight:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=$fps"
+        val fpsValue = fps.toDoubleOrNull() ?: 30.0
+
+        // Fit the still into the canvas first, then let Ken Burns zoom the already-padded frame so
+        // the motion never changes the output aspect ratio.
+        val fitFilter = "scale=w=$canvasWidth:h=$canvasHeight:force_original_aspect_ratio=decrease," +
+            "pad=$canvasWidth:$canvasHeight:(ow-iw)/2:(oh-ih)/2,setsar=1"
+        val scaleFilter = if (kenBurnsEnabled) {
+            val frames = (perImageDurationSec * fpsValue).toInt().coerceAtLeast(1)
+            "$fitFilter,zoompan=z='min(zoom+$KEN_BURNS_ZOOM_STEP,$KEN_BURNS_MAX_ZOOM)':d=$frames:" +
+                "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${canvasWidth}x$canvasHeight:fps=$fps"
+        } else {
+            "$fitFilter,fps=$fps"
+        }
 
         val scaledLabels = imagePaths.indices.map { i -> "v$i" }
         val scaleChain = imagePaths.indices.joinToString(";") { i -> "[$i:v]$scaleFilter[${scaledLabels[i]}]" }
 
         val noTransition = imagePaths.size == 1 || transition.isBlank() || transition.equals("none", ignoreCase = true)
-        val (filterGraph, finalVideoLabel) = if (noTransition) {
+        val (transitionGraph, transitionOutputLabel) = if (noTransition) {
             buildConcatGraph(scaleChain, scaledLabels)
         } else {
             buildXfadeGraph(scaleChain, scaledLabels, perImageDurationSec, transition, transitionDurationSec)
         }
+        val (filterGraph, finalVideoLabel) = appendTextOverlay(
+            filterGraph = transitionGraph,
+            inputLabel = transitionOutputLabel,
+            overlayText = overlayText
+        )
 
         args.add("-filter_complex")
         args.add(filterGraph)
@@ -494,4 +515,23 @@ object FFmpegCommandBuilder {
         }
         return "$scaleChain$xfadeChain" to prevLabel
     }
+
+    private fun appendTextOverlay(
+        filterGraph: String,
+        inputLabel: String,
+        overlayText: String
+    ): Pair<String, String> {
+        if (overlayText.isBlank()) return filterGraph to inputLabel
+
+        val escapedText = escapeDrawText(overlayText)
+        val overlayFilter = "drawtext=text='$escapedText':fontsize=48:fontcolor=white:" +
+            "borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-text_h-40"
+        return "$filterGraph;[$inputLabel]$overlayFilter[textout]" to "textout"
+    }
+
+    private fun escapeDrawText(text: String): String = text
+        .replace("\\", "\\\\")
+        .replace("'", "\\'")
+        .replace(":", "\\:")
+        .replace("%", "\\%")
 }

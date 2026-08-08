@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.core.presets.ExportPresets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -42,7 +43,9 @@ fun ExportDialog(
         val frameRates = listOf("24fps", "30fps", "60fps")
         val bitrates = listOf("Low", "Medium", "High")
         val aspectRatios = listOf("Asli", "16:9", "9:16", "1:1", "4:5")
-        val platformPresets = listOf("Custom", "Instagram Reel", "TikTok", "YouTube Short", "YouTube Video")
+
+        // Audio-only presets are excluded: this dialog drives video exports.
+        val availablePresets = ExportPresets.getVideoPresets()
 
         AlertDialog(
             onDismissRequest = onDismiss,
@@ -77,24 +80,23 @@ fun ExportDialog(
                                 expanded = expanded,
                                 onDismissRequest = { expanded = false }
                             ) {
-                                platformPresets.forEach { preset ->
+                                DropdownMenuItem(
+                                    text = { Text("Custom") },
+                                    onClick = {
+                                        selectedPreset = "Custom"
+                                        expanded = false
+                                    }
+                                )
+                                availablePresets.forEach { preset ->
                                     DropdownMenuItem(
-                                        text = { Text(preset) },
+                                        text = { Text(preset.name) },
                                         onClick = {
-                                            selectedPreset = preset
+                                            selectedPreset = preset.name
+                                            selectedResolution = preset.resolution
+                                            selectedBitrate = preset.bitrate
+                                            selectedAspectRatio = preset.aspectRatio
+                                            selectedFrameRate = preset.frameRate
                                             expanded = false
-                                            when (preset) {
-                                                "Instagram Reel", "TikTok", "YouTube Short" -> {
-                                                    selectedResolution = "1080p"
-                                                    selectedBitrate = "High"
-                                                    selectedAspectRatio = "9:16"
-                                                }
-                                                "YouTube Video" -> {
-                                                    selectedResolution = "1080p"
-                                                    selectedBitrate = "High"
-                                                    selectedAspectRatio = "16:9"
-                                                }
-                                            }
                                         }
                                     )
                                 }

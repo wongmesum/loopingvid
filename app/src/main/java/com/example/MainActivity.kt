@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.example.core.audio.AudioAnalysisRepository
 import com.example.core.database.AppDatabase
 import com.example.core.database.FirestoreJobHistorySyncManager
 import com.example.core.database.LoopingVidRepository
@@ -71,7 +72,8 @@ class MainActivity : ComponentActivity() {
         val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
         val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
         val visualizerProcessor = VisualizerProcessor(applicationContext, repository)
-        val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor)
+        val audioAnalysisRepository = AudioAnalysisRepository(applicationContext)
+        val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor, audioAnalysisRepository)
         val exportViewModel = com.example.core.ui.ExportViewModel(mediaProcessor)
         val exportQueueViewModel = com.example.core.work.ExportQueueViewModel(application)
 
