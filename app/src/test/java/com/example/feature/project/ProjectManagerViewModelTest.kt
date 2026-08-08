@@ -80,7 +80,7 @@ class ProjectManagerViewModelTest {
         viewModel.createProject("   ", ProjectType.LOOP)
         advanceUntilIdle()
         assertTrue(viewModel.uiState.value.projects.isEmpty())
-        assertEquals("Nama proyek tidak boleh kosong", viewModel.uiState.value.errorMessage)
+        assertEquals("Project name cannot be empty", viewModel.uiState.value.errorMessage)
 
         viewModel.dismissError()
         viewModel.createProject("Valid", ProjectType.LOOP)
@@ -90,7 +90,7 @@ class ProjectManagerViewModelTest {
         viewModel.renameProject(created, "")
         advanceUntilIdle()
         assertEquals("Valid", viewModel.uiState.value.projects.single().name)
-        assertEquals("Nama proyek tidak boleh kosong", viewModel.uiState.value.errorMessage)
+        assertEquals("Project name cannot be empty", viewModel.uiState.value.errorMessage)
     }
 
     @Test
@@ -102,7 +102,7 @@ class ProjectManagerViewModelTest {
         viewModel.updateProjectConfig(original, "invalid json {")
         advanceUntilIdle()
         assertEquals("{}", viewModel.uiState.value.projects.single().configJson)
-        assertEquals("Konfigurasi proyek tidak valid", viewModel.uiState.value.errorMessage)
+        assertEquals("Invalid project configuration", viewModel.uiState.value.errorMessage)
 
         viewModel.dismissError()
         viewModel.updateProjectConfig(original, """{"key": "value"}""")
