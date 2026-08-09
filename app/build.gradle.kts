@@ -24,7 +24,7 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
     ndk {
-      abiFilters += listOf("armeabi-v7a", "x86")
+      abiFilters += "arm64-v8a"
     }
   }
 
@@ -74,6 +74,10 @@ android {
     unitTests {
       isIncludeAndroidResources = true
       all {
+        // The build host has limited RAM, so an unbounded test JVM competes with the
+        // Gradle daemon and dies with a native OOM before any test reports a result.
+        it.maxHeapSize = "1g"
+        it.maxParallelForks = 1
         it.extensions.configure(JacocoTaskExtension::class.java) {
           isIncludeNoLocationClasses = true
           excludes = listOf("jdk.internal.*")

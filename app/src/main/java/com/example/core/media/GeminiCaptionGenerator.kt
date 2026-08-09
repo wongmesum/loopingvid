@@ -109,11 +109,20 @@ class GeminiCaptionGenerator(private val context: Context) {
         try {
             // Extract audio using FFmpeg
             tempAudioFile = File(context.cacheDir, "temp_audio_${System.currentTimeMillis()}.mp3")
-            val cmd = "-y -i $videoUri -vn -acodec libmp3lame -ar 16000 -ac 1 -b:a 32k ${tempAudioFile.absolutePath}"
-            
-            Timber.d("Extracting audio for Gemini: $cmd")
+            val args = listOf(
+                "-y",
+                "-i", videoUri,
+                "-vn",
+                "-acodec", "libmp3lame",
+                "-ar", "16000",
+                "-ac", "1",
+                "-b:a", "32k",
+                tempAudioFile.absolutePath
+            )
+
+            Timber.d("Extracting audio for Gemini: %s", args.joinToString(" "))
             val wrapper = FFmpegWrapperImpl(context)
-            val result = wrapper.execute(cmd)
+            val result = wrapper.execute(args)
             
             if (!tempAudioFile.exists()) {
                 return@withContext "Error: Failed to extract audio from video for transcription."

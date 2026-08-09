@@ -1,30 +1,27 @@
 package com.example.core.ffmpeg
 
 import android.content.Context
-import com.github.hiteshsondhi88.libffmpeg.FFmpeg
-import com.github.hiteshsondhi88.libffmpeg.LoadBinaryResponseHandler
-import com.github.hiteshsondhi88.libffmpeg.ExecuteBinaryResponseHandler
-import com.github.hiteshsondhi88.libffmpeg.exceptions.FFmpegCommandAlreadyRunningException
-import com.github.hiteshsondhi88.libffmpeg.exceptions.FFmpegNotSupportedException
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.FFmpegKitConfig
+import com.arthenica.ffmpegkit.FFmpegSession
+import com.arthenica.ffmpegkit.ReturnCode
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.io.File
 import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
 
 /**
- * Robust, high-performance crash-proof wrapper for [FFmpegWrapper] using FFmpegAndroid.
- * All initializations and binary load calls are lazily and safely wrapped in global Throwable
- * catch blocks, preventing any startup crashes (e.g. UnsatisfiedLinkError on 64-bit devices).
- * Features an integrated live log parser to update real progress bar states.
+ * FFmpegKit-backed implementation of [FFmpegWrapper].
+ * Native initialization stays guarded so unsupported devices fail as an execution result.
  */
-class FFmpegWrapperImpl(private val context: Context) : FFmpegWrapper {
+class FFmpegWrapperImpl(@Suppress("UNUSED_PARAMETER") private val context: Context) : FFmpegWrapper {
 
     companion object {
         private const val TAG = "FFmpegWrapperImpl"
@@ -33,10 +30,11 @@ class FFmpegWrapperImpl(private val context: Context) : FFmpegWrapper {
     private val _logFlow = MutableSharedFlow<String>(extraBufferCapacity = 256)
     override val logFlow: Flow<String> = _logFlow.asSharedFlow()
 
-    private var ffmpeg: FFmpeg? = null
+    private val scope = CoroutineScope(Dispatchers.Default)
     private var isSupported = false
     private var isInitialized = false
-    private val scope = CoroutineScope(Dispatchers.Default)
+    private var activeSession: FFmpegSession? = null
+    private val sessionLock = Any()
 
     init {
         safeInitialize()
@@ -45,45 +43,36 @@ class FFmpegWrapperImpl(private val context: Context) : FFmpegWrapper {
     @Synchronized
     private fun safeInitialize() {
         if (isInitialized) return
+
         try {
-            Timber.i("Initializing FFmpeg instance safely...")
-            val inst = FFmpeg.getInstance(context.applicationContext)
-            ffmpeg = inst
-            inst.loadBinary(object : LoadBinaryResponseHandler() {
-                override fun onStart() {}
-                override fun onFailure() {
-                    Timber.e("FFmpeg native binary load callback reported failure")
-                    isSupported = false
-                }
-                override fun onSuccess() {
-                    Timber.i("FFmpeg native binary loaded successfully!")
-                    isSupported = true
-                }
-                override fun onFinish() {}
-            })
-            isInitialized = true
+            val version = FFmpegKitConfig.getFFmpegVersion()
+            isSupported = !version.isNullOrBlank()
+            Timber.i("FFmpegKit initialized: %s", version)
         } catch (t: Throwable) {
-            // CRITICAL: We catch Throwable to handle UnsatisfiedLinkError, NoClassDefFoundError, etc.
-            // on unsupported architectures (like pure 64-bit devices or emulators), preventing startup crashes!
-            Timber.e(t, "Critically handled error or exception during native FFmpeg initialization")
-            ffmpeg = null
+            Timber.e(t, "Failed to initialize FFmpegKit native engine")
             isSupported = false
-            isInitialized = true // Mark initialized so we don't keep looping on failure
+        } finally {
+            isInitialized = true
         }
     }
 
     override fun isNativeSupported(): Boolean {
         safeInitialize()
-        return isSupported && ffmpeg != null
+        return isSupported
     }
 
     override fun getVersion(): String {
-        return "FFmpegAndroid (Crash-Proof Soft Emulation Fallback)"
+        return try {
+            "FFmpegKit ${FFmpegKitConfig.getFFmpegVersion()}"
+        } catch (t: Throwable) {
+            Timber.e(t, "Failed to read FFmpegKit version")
+            "FFmpegKit (unavailable)"
+        }
     }
 
     override suspend fun execute(command: String): Int {
-        val args = command.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
-        return execute(args) {}
+        val args = command.trim().split("\\s+".toRegex()).filter(String::isNotBlank)
+        return execute(args)
     }
 
     override suspend fun execute(
@@ -91,116 +80,107 @@ class FFmpegWrapperImpl(private val context: Context) : FFmpegWrapper {
         onProgress: suspend (Int) -> Unit
     ): Int = withContext(Dispatchers.IO) {
         safeInitialize()
-        val currentFfmpeg = ffmpeg
-
-        if (!isSupported || currentFfmpeg == null) {
-            Timber.e("FFmpeg native engine is not supported or failed to initialize on this architecture")
-            _logFlow.emit("Error: Native FFmpeg engine is not supported on this device's architecture.")
-            return@withContext 1
+        if (!isSupported) {
+            return@withContext failExecution("Native FFmpeg engine is not supported on this device")
         }
 
-        val cmdString = commandArgs.joinToString(" ")
-        Timber.i("Executing FFmpeg command safely: ffmpeg $cmdString")
-        _logFlow.emit("Executing: ffmpeg $cmdString")
+        // Arguments stay as an array end-to-end: FFmpegKit never re-parses them, so paths
+        // containing spaces or quotes cannot split into extra arguments.
+        val arguments = commandArgs.toTypedArray()
+        Timber.i("Executing FFmpeg command safely: ffmpeg %s", commandArgs.joinToString(" "))
+        _logFlow.emit("Executing: ffmpeg ${commandArgs.joinToString(" ")}")
 
-        // Parse target duration in seconds for progress bar computing
-        var targetDurationSec = 0.0
-        val tIndex = commandArgs.indexOf("-t")
-        if (tIndex != -1 && tIndex + 1 < commandArgs.size) {
-            targetDurationSec = commandArgs[tIndex + 1].toDoubleOrNull() ?: 0.0
-        }
-        if (targetDurationSec <= 0.0) {
-            val iIndex = commandArgs.indexOf("-i")
-            if (iIndex != -1 && iIndex + 1 < commandArgs.size) {
-                val inputPath = commandArgs[iIndex + 1]
-                if (inputPath.startsWith("/") || inputPath.startsWith("content://") || inputPath.startsWith("file://")) {
-                    try {
-                        val retriever = android.media.MediaMetadataRetriever()
-                        retriever.setDataSource(inputPath)
-                        val durationStr = retriever.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
-                        retriever.release()
-                        targetDurationSec = (durationStr?.toLongOrNull() ?: 0L) / 1000.0
-                    } catch (e: Exception) {
-                        Timber.e(e, "Error parsing media duration")
-                    }
-                }
-            }
-        }
-
-        val finalTargetDurationSec = targetDurationSec
-
-        suspendCoroutine { continuation ->
+        val targetDurationSec = findTargetDuration(commandArgs)
+        suspendCancellableCoroutine { continuation ->
             try {
-                currentFfmpeg.execute(commandArgs.toTypedArray(), object : ExecuteBinaryResponseHandler() {
-                    override fun onStart() {
-                        Timber.i("FFmpeg execution started")
-                    }
-
-                    override fun onProgress(message: String?) {
-                        if (message != null) {
-                            Timber.v("FFmpeg Progress: %s", message)
+                val session = FFmpegKit.executeWithArgumentsAsync(
+                    arguments,
+                    { completedSession ->
+                        synchronized(sessionLock) {
+                            activeSession = null
+                        }
+                        val returnCode = completedSession.returnCode
+                        if (ReturnCode.isSuccess(returnCode)) {
+                            Timber.i("FFmpeg command finished successfully")
+                            _logFlow.tryEmit("FFmpeg [success]: Command completed with exit code 0.")
+                            if (continuation.isActive) continuation.resume(0)
+                        } else {
+                            val message = completedSession.failStackTrace ?: "exit code $returnCode"
+                            Timber.e("FFmpeg execution failed: %s", message)
+                            _logFlow.tryEmit("FFmpeg [error]: Command failed. $message")
+                            if (continuation.isActive) continuation.resume(1)
+                        }
+                    },
+                    { log ->
+                        log.message?.let { message ->
                             _logFlow.tryEmit(message)
-
-                            // Real-time progress calculation by parsing standard FFmpeg stderr log:
-                            if (finalTargetDurationSec > 0.0 && message.contains("time=")) {
-                                try {
-                                    val timeIndex = message.indexOf("time=")
-                                    if (timeIndex != -1) {
-                                        val timeString = message.substring(timeIndex + 5).trim().split("\\s+".toRegex())[0]
-                                        val hms = timeString.split(":")
-                                        if (hms.size >= 3) {
-                                            val hrs = hms[0].toDoubleOrNull() ?: 0.0
-                                            val mins = hms[1].toDoubleOrNull() ?: 0.0
-                                            val secs = hms[2].toDoubleOrNull() ?: 0.0
-                                            val totalSecs = hrs * 3600.0 + mins * 60.0 + secs
-                                            val progressPercent = ((totalSecs / finalTargetDurationSec) * 100.0).toInt().coerceIn(0, 100)
-                                            scope.launch {
-                                                onProgress(progressPercent)
-                                            }
-                                        }
-                                    }
-                                } catch (e: Exception) {
-                                    Timber.w(e, "Could not parse progress from log message")
-                                }
+                            parseProgress(message, targetDurationSec)?.let { progress ->
+                                scope.launch { onProgress(progress) }
                             }
                         }
+                    },
+                    { statistics ->
+                        if (targetDurationSec > 0.0) {
+                            val progress = ((statistics.time / 1000.0 / targetDurationSec) * 100.0)
+                                .toInt()
+                                .coerceIn(0, 100)
+                            scope.launch { onProgress(progress) }
+                        }
                     }
-
-                    override fun onFailure(message: String?) {
-                        Timber.e("FFmpeg execution failed: %s", message)
-                        _logFlow.tryEmit("FFmpeg [error]: Command failed. $message")
-                        continuation.resume(1)
-                    }
-
-                    override fun onSuccess(message: String?) {
-                        Timber.i("FFmpeg command finished successfully.")
-                        _logFlow.tryEmit("FFmpeg [success]: Command completed with exit code 0.")
-                        continuation.resume(0)
-                    }
-
-                    override fun onFinish() {}
-                })
-            } catch (e: FFmpegCommandAlreadyRunningException) {
-                Timber.e(e, "FFmpeg command already running")
-                _logFlow.tryEmit("FFmpeg [error]: Command already running.")
-                continuation.resume(1)
+                )
+                synchronized(sessionLock) {
+                    activeSession = session
+                }
+                continuation.invokeOnCancellation {
+                    cancel()
+                }
             } catch (t: Throwable) {
                 Timber.e(t, "Uncaught error during FFmpeg execution")
                 _logFlow.tryEmit("FFmpeg [error]: Execution failed due to system/native error.")
-                continuation.resume(1)
+                if (t !is CancellationException && continuation.isActive) {
+                    continuation.resume(1)
+                }
             }
         }
     }
 
     override fun cancel() {
-        Timber.w("cancelExecution requested")
+        val sessionId = synchronized(sessionLock) { activeSession?.sessionId }
+        if (sessionId == null) return
+
         try {
-            val currentFfmpeg = ffmpeg
-            if (currentFfmpeg != null && currentFfmpeg.isFFmpegCommandRunning) {
-                currentFfmpeg.killRunningProcesses()
+            Timber.w("Cancelling FFmpeg session: %s", sessionId)
+            FFmpegKit.cancel(sessionId)
+            synchronized(sessionLock) {
+                activeSession = null
             }
         } catch (t: Throwable) {
-            Timber.e(t, "Failed to kill FFmpeg processes safely")
+            Timber.e(t, "Failed to cancel FFmpeg session safely")
         }
+    }
+
+    private fun failExecution(message: String): Int {
+        Timber.e(message)
+        _logFlow.tryEmit("FFmpeg [error]: $message")
+        return 1
+    }
+
+    private fun findTargetDuration(commandArgs: List<String>): Double {
+        val durationIndex = commandArgs.indexOf("-t")
+        if (durationIndex >= 0 && durationIndex + 1 < commandArgs.size) {
+            return commandArgs[durationIndex + 1].toDoubleOrNull() ?: 0.0
+        }
+        return 0.0
+    }
+
+    private fun parseProgress(message: String, targetDurationSec: Double): Int? {
+        if (targetDurationSec <= 0.0) return null
+        val timeValue = Regex("time=(\\d{2}):(\\d{2}):(\\d{2}(?:\\.\\d+)?)")
+            .find(message)
+            ?.groupValues
+            ?: return null
+        val totalSeconds = timeValue[1].toDouble() * 3600.0 +
+            timeValue[2].toDouble() * 60.0 + timeValue[3].toDouble()
+        return ((totalSeconds / targetDurationSec) * 100.0).toInt().coerceIn(0, 100)
     }
 }
