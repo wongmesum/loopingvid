@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.FolderSpecial
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Loop
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Slideshow
 import androidx.compose.material3.AlertDialog
@@ -112,6 +113,7 @@ fun ProjectManagerScreen(
                             onRename = { renameTarget = project },
                             onDuplicate = { viewModel.duplicateProject(project) },
                             onArchive = { viewModel.archiveProject(project.id) },
+                            onSnapshotHistory = { viewModel.openSnapshotHistory(project) },
                             onDelete = { deleteTarget = project }
                         )
                     }
@@ -154,6 +156,17 @@ fun ProjectManagerScreen(
                 ) { Text("Hapus") }
             },
             dismissButton = { TextButton(onClick = { deleteTarget = null }) { Text("Batal") } }
+        )
+    }
+
+    uiState.snapshotProject?.let { project ->
+        SnapshotHistoryDialog(
+            project = project,
+            snapshots = uiState.snapshots,
+            onDismiss = { viewModel.closeSnapshotHistory() },
+            onCreateSnapshot = { label -> viewModel.createSnapshot(project.id, label) },
+            onRestore = { snapshotId -> viewModel.restoreSnapshot(snapshotId) },
+            onDelete = { snapshotId -> viewModel.deleteSnapshot(snapshotId) }
         )
     }
 
@@ -274,6 +287,7 @@ private fun ProjectCard(
     onRename: () -> Unit,
     onDuplicate: () -> Unit,
     onArchive: () -> Unit,
+    onSnapshotHistory: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
@@ -306,6 +320,9 @@ private fun ProjectCard(
                 }
                 IconButton(onClick = onArchive, modifier = Modifier.testTag("archive_project_${project.id}")) {
                     Icon(Icons.Rounded.Archive, contentDescription = "Arsipkan Proyek")
+                }
+                IconButton(onClick = onSnapshotHistory, modifier = Modifier.testTag("snapshot_history_${project.id}")) {
+                    Icon(Icons.Rounded.Schedule, contentDescription = "Riwayat Versi Proyek")
                 }
                 IconButton(onClick = onDelete, modifier = Modifier.testTag("delete_project_${project.id}")) {
                     Icon(Icons.Rounded.Delete, contentDescription = "Hapus Proyek")

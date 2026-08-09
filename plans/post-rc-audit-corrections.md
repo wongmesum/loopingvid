@@ -2,7 +2,7 @@
 
 ## Status Jujur
 - **Asset Manager:** selesai lokal (Room asset cache, UI pustaka, picker recording), belum device test.
-- **Project Snapshot:** belum selesai.
+- **Project Snapshot:** selesai lokal (Room v6, repository, UI history), belum device test.
 - **Unified Render Engine:** sebagian.
 - **Audio Analysis:** sumber data nyata sudah terpasang (mastering + trimmer), belum device test.
 - **Visualizer:** belum device test.
@@ -38,7 +38,13 @@
   - Picker integration: Loop, Editor (video/audio/overlay), Mastering all record picks.
   - Tests: 2 migration tests, 7 repository tests, 3 ViewModel tests — all green.
   - Verification: compileDebugKotlin ✓, testDebugUnitTest ✓, assembleDebug ✓ (APK 53MB).
-- Checkpoint 4: Project Snapshot dan Recovery.
+- Checkpoint 4: Project Snapshot dan Recovery. [SELESAI]
+  - `ProjectSnapshotEntity.kt`, `ProjectSnapshotDao.kt`, `ProjectSnapshotRepository.kt` mengatur penyimpanan & max 10 snapshot.
+  - `MIGRATION_5_6` selesai (v6), FK CASCADE tervalidasi dengan export KSP (hash d3a44187ef0bf12b7b1bf565abac800c).
+  - `ProjectManagerViewModel.kt` diextend dengan state snapshot (backward-compatible repo nullable).
+  - `ProjectManagerScreen.kt` dan `SnapshotHistoryDialog.kt` melayani UI interaksi: buat, restore, hapus snapshot.
+  - Test: 2 migration tests, 8 repository tests — semua hijau.
+  - Verifikasi: `compileDebugKotlin` ✅, `ProjectSnapshotRepositoryTest` ✅ (exit 0), `testDebugUnitTest` ✅ (1m 36s), `assembleDebug` ✅ (2m 7s).
 - Checkpoint 5: Selesaikan Unified Render Queue.
 - Checkpoint 6: Verifikasi ARM64.
 - Checkpoint 7: Device Test dan Release Gate.

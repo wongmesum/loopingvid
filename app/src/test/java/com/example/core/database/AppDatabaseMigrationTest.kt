@@ -173,4 +173,58 @@ class AppDatabaseMigrationTest {
             assertEquals(1, cursor.getInt(cursor.getColumnIndexOrThrow("isPinned")))
         }
     }
+
+    @Test
+    fun `migration 5 to 6 creates an empty project snapshots table`() {
+        val db = openHelper.writableDatabase
+
+        MIGRATION_3_4.migrate(db)
+        MIGRATION_4_5.migrate(db)
+        MIGRATION_5_6.migrate(db)
+
+        db.query("SELECT COUNT(*) FROM project_snapshots").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+    }
+
+    @Test
+    fun `project snapshots accept entity columns and preserve the project`() {
+        val db = openHelper.writableDatabase
+
+        MIGRATION_3_4.migrate(db)
+        MIGRATION_4_5.migrate(db)
+        db.execSQL(
+            """
+            INSERT INTO projects
+                (id, name, type, thumbnailUri, sourceMediaUri, sourceAudioUri, configJson, status, createdAt, updatedAt)
+            VALUES
+                (7, 'Saved Project', 'loop', NULL, 'content://video/1', 'content://audio/1', '{"speed":2}', 'draft', 100, 200)
+            """.trimIndent()
+        )
+
+        MIGRATION_5_6.migrate(db)
+        db.execSQL(
+            """
+            INSERT INTO project_snapshots
+                (projectId, label, configJson, sourceMediaUri, sourceAudioUri, createdAt)
+            VALUES
+                (7, 'Versi awal', '{"speed":1}', 'content://video/1', 'content://audio/1', 300)
+            """.trimIndent()
+        )
+
+        db.query(
+            """
+            SELECT p.name, s.label, s.configJson
+            FROM projects p
+            JOIN project_snapshots s ON s.projectId = p.id
+            WHERE p.id = 7
+            """.trimIndent()
+        ).use { cursor ->
+            assertTrue("the existing project and its snapshot must be readable", cursor.moveToFirst())
+            assertEquals("Saved Project", cursor.getString(cursor.getColumnIndexOrThrow("name")))
+            assertEquals("Versi awal", cursor.getString(cursor.getColumnIndexOrThrow("label")))
+            assertEquals("{\"speed\":1}", cursor.getString(cursor.getColumnIndexOrThrow("configJson")))
+        }
+    }
 }

@@ -10,6 +10,7 @@ import com.example.core.database.AppDatabase
 import com.example.core.database.AssetRepository
 import com.example.core.database.FirestoreJobHistorySyncManager
 import com.example.core.database.LoopingVidRepository
+import com.example.core.database.ProjectSnapshotRepository
 import com.example.core.ffmpeg.MediaProcessor
 import com.example.core.ffmpeg.VisualizerProcessor
 import com.example.feature.assets.AssetManagerViewModel
@@ -65,13 +66,14 @@ class MainActivity : ComponentActivity() {
         val mediaProcessor = MediaProcessor(applicationContext, repository)
         val audioAnalysisRepository = AudioAnalysisRepository(applicationContext)
         val assetRepository = AssetRepository(db.assetDao())
+        val projectSnapshotRepository = ProjectSnapshotRepository(db.projectSnapshotDao(), db.projectDao())
 
         val loopViewModel = LoopViewModel(mediaProcessor)
         val masteringViewModel = MasteringViewModel(mediaProcessor, applicationContext, audioAnalysisRepository)
         val editorViewModel = EditorViewModel(mediaProcessor, applicationContext)
         val liveViewModel = LiveViewModel(repository)
         val historyViewModel = HistoryViewModel(repository, firestoreSyncManager)
-        val projectManagerViewModel = ProjectManagerViewModel(repository)
+        val projectManagerViewModel = ProjectManagerViewModel(repository, projectSnapshotRepository)
         val settingsViewModel = SettingsViewModel(repository)
         val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
         val slideshowViewModel = SlideshowViewModel(slideshowProcessor)

@@ -60,3 +60,27 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_assets_isFavorite` ON `assets` (`isFavorite`)")
     }
 }
+
+/**
+ * Non-destructive migration from schema v5 to v6.
+ * Adds explicit project snapshots for user-managed recovery points.
+ */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `project_snapshots` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `projectId` INTEGER NOT NULL,
+                `label` TEXT NOT NULL,
+                `configJson` TEXT NOT NULL,
+                `sourceMediaUri` TEXT,
+                `sourceAudioUri` TEXT,
+                `createdAt` INTEGER NOT NULL,
+                FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_project_snapshots_projectId` ON `project_snapshots` (`projectId`)")
+    }
+}
