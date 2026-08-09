@@ -11,14 +11,15 @@ class HealthDashboardTest {
     @Test
     fun defaultLiveUiState_hasValidHealthScoreAndMetrics() {
         val uiState = LiveUiState()
-        assertEquals(98, uiState.healthScorePct)
-        assertEquals(4500, uiState.currentBitrateKbps)
+        // After simulation removal, defaults are honest zeros — no fake seeded metrics.
+        assertEquals(0, uiState.healthScorePct)
+        assertEquals(0, uiState.currentBitrateKbps)
         assertEquals(4500, uiState.targetBitrateKbps)
         assertEquals(0, uiState.droppedFrames)
-        assertEquals(120, uiState.latencyMs)
-        assertEquals(6, uiState.jitterMs)
-        assertTrue(uiState.bitrateHistory.isNotEmpty())
-        assertTrue(uiState.rttHistory.isNotEmpty())
+        assertEquals(0, uiState.latencyMs)
+        assertEquals(0, uiState.jitterMs)
+        assertTrue(uiState.bitrateHistory.isEmpty())
+        assertTrue(uiState.rttHistory.isEmpty())
     }
 
     @Test

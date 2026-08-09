@@ -213,6 +213,10 @@ class EditorViewModel(
 
     private fun startRealtimeSpectrumAnimation() {
         viewModelScope.launch(Dispatchers.Default) {
+            // In release, we do not animate a fake spectrum. Checkpoint 2 will integrate
+            // real spectrum magnitudes from AudioAnalysisRepository here.
+            if (!com.example.BuildConfig.DEBUG) return@launch
+
             var phase = 0f
             while (true) {
                 val state = _uiState.value

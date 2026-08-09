@@ -195,13 +195,15 @@ fun D3DataOverlayCard(
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
+                            // Without a real audience API these numbers do not exist; show an honest
+                            // placeholder instead of a fabricated count.
                             Text(
-                                text = "%,d".format(uiState.viewerCount),
+                                text = if (uiState.isTelemetrySimulated) "%,d".format(uiState.viewerCount) else "Tidak tersedia",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = Color.White
                             )
                             Text(
-                                text = "Peak: %,d".format(uiState.peakViewerCount),
+                                text = if (uiState.isTelemetrySimulated) "Peak: %,d".format(uiState.peakViewerCount) else "Belum ada data penonton",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.Gray,
                                 fontSize = 10.sp
@@ -232,12 +234,12 @@ fun D3DataOverlayCard(
                         }
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = "%.1f Mbps".format(uiState.bandwidthMbps),
+                                text = if (uiState.isTelemetrySimulated) "%.1f Mbps".format(uiState.bandwidthMbps) else "Tidak tersedia",
                                 style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                 color = Color.White
                             )
                             Text(
-                                text = "${uiState.currentBitrateKbps} Kbps target",
+                                text = "Target ${uiState.targetBitrateKbps} Kbps",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color.Gray,
                                 fontSize = 10.sp
@@ -493,7 +495,11 @@ private fun D3TelemetryCanvasFallback(
             val h = size.height
             if (w <= 0 || h <= 0) return@Canvas
 
-            val pts = viewerHistory.ifEmpty { listOf(100, 120, 110, 130, 125) }
+            val pts = if (com.example.BuildConfig.DEBUG) {
+                viewerHistory.ifEmpty { listOf(100, 120, 110, 130, 125) }
+            } else {
+                viewerHistory.ifEmpty { listOf(0, 0, 0, 0, 0) }
+            }
             val maxVal = pts.maxOrNull()?.toFloat()?.coerceAtLeast(1f) ?: 1f
             val stepX = w / (pts.size - 1).coerceAtLeast(1)
 

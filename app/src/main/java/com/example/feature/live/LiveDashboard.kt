@@ -19,9 +19,11 @@ import kotlinx.coroutines.delay
 fun LiveDashboard(modifier: Modifier = Modifier) {
     val modelProducer = remember { ChartEntryModelProducer() }
     var currentViewers by remember { mutableStateOf(0) }
-    
-    // Simulate real-time data
+
+    // Simulate real-time data ONLY in debug builds to test the chart UI.
+    // In production, this chart must remain empty or show real metrics.
     LaunchedEffect(Unit) {
+        if (!com.example.BuildConfig.DEBUG) return@LaunchedEffect
         var x = 0f
         val entries = mutableListOf<FloatEntry>()
         while (true) {

@@ -14,7 +14,6 @@ import com.example.core.media.EqBandConfig
 import com.example.core.media.ExoPlayerAudioProcessor
 import com.example.core.media.Media3SpectrumAudioProcessor
 import com.example.core.media.NoiseReductionConfig
-import com.example.core.media.WaveformAnalyzer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -120,12 +119,13 @@ class AudioMasteringViewModel : ViewModel() {
     }
 
     fun loadAudioTrack(uri: String, title: String) {
-        val analysis = WaveformAnalyzer.generateSimulatedWaveform()
+        // Analysis data will be populated by AudioAnalysisRepository integration (Checkpoint 2).
+        // Until then, null signals "analysis pending" and UI shows placeholder.
         _uiState.update {
             it.copy(
                 audioUri = uri,
                 audioTitle = title,
-                analysisData = analysis
+                analysisData = null
             )
         }
         recalculateMasteringMetrics()

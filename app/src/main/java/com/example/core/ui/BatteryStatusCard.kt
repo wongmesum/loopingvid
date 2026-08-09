@@ -51,9 +51,11 @@ fun BatteryStatusCard(
     onBatteryAlertTriggered: (BatteryInfo) -> Unit = {}
 ) {
     val realBatteryInfo = rememberBatteryStatus()
+    // Simulation toggle only exists so QA can visually verify the low-battery banner in a debug
+    // build; a release build must never let the user fabricate battery telemetry.
     var simulatedLowBattery by remember { mutableStateOf(false) }
 
-    val currentInfo = if (simulatedLowBattery) {
+    val currentInfo = if (com.example.BuildConfig.DEBUG && simulatedLowBattery) {
         BatteryInfo(
             percentage = 8,
             isCharging = false,
@@ -125,16 +127,17 @@ fun BatteryStatusCard(
                     }
                 }
 
-                // Simulate Toggle Button
-                OutlinedButton(
-                    onClick = { simulatedLowBattery = !simulatedLowBattery },
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.testTag("simulate_low_battery_button")
-                ) {
-                    Text(
-                        text = if (simulatedLowBattery) "Reset Real" else "Simulate <10%",
-                        fontSize = 10.sp
-                    )
+                if (com.example.BuildConfig.DEBUG) {
+                    OutlinedButton(
+                        onClick = { simulatedLowBattery = !simulatedLowBattery },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.testTag("simulate_low_battery_button")
+                    ) {
+                        Text(
+                            text = if (simulatedLowBattery) "Reset Real" else "Mode Simulasi <10%",
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
 

@@ -57,14 +57,16 @@ data class LiveUiState(
     val streamStatus: StreamStatus = StreamStatus.OFFLINE,
     val currentLoopRound: Int = 1,
     val liveDurationSec: Long = 0,
-    val currentBitrateKbps: Int = 4500,
+    // Network/audience metrics start empty: no real RTMP telemetry source exists yet, so seeding
+    // demo numbers here would present fabricated values as measured data.
+    val currentBitrateKbps: Int = 0,
     val targetBitrateKbps: Int = 4500,
-    val bitrateHistory: List<Int> = listOf(4400, 4450, 4520, 4480, 4550, 4500, 4490, 4510, 4530, 4470, 4500),
-    val viewerCount: Int = 1840,
-    val peakViewerCount: Int = 2450,
-    val viewerHistory: List<Int> = listOf(1420, 1480, 1550, 1620, 1700, 1750, 1810, 1840, 1890, 1920, 1880, 1950, 2010, 2080, 2150),
-    val bandwidthMbps: Float = 9.8f,
-    val bandwidthHistoryMbps: List<Float> = listOf(8.2f, 8.5f, 9.1f, 8.8f, 9.4f, 9.2f, 8.7f, 9.5f, 9.8f, 9.3f, 9.6f, 10.1f, 9.7f, 10.4f, 9.9f),
+    val bitrateHistory: List<Int> = emptyList(),
+    val viewerCount: Int = 0,
+    val peakViewerCount: Int = 0,
+    val viewerHistory: List<Int> = emptyList(),
+    val bandwidthMbps: Float = 0f,
+    val bandwidthHistoryMbps: List<Float> = emptyList(),
     val showD3OverlayOnVideo: Boolean = true,
     val d3OverlayOpacity: Float = 0.85f,
     val d3OverlayTimeWindowSec: Int = 30,
@@ -72,12 +74,14 @@ data class LiveUiState(
     val droppedFrames: Int = 0,
     val totalFrames: Long = 0,
     val fps: Int = 60,
-    val latencyMs: Int = 120, // RTT
-    val rttHistory: List<Int> = listOf(118, 122, 119, 125, 121, 118, 120, 124, 122, 119),
-    val jitterMs: Int = 6,
-    val jitterHistory: List<Int> = listOf(4, 5, 8, 6, 5, 7, 6, 4, 6, 5),
-    val bufferHealthPct: Float = 98f,
-    val healthScorePct: Int = 98,
+    val latencyMs: Int = 0, // RTT
+    val rttHistory: List<Int> = emptyList(),
+    val jitterMs: Int = 0,
+    val jitterHistory: List<Int> = emptyList(),
+    val bufferHealthPct: Float = 0f,
+    val healthScorePct: Int = 0,
+    /** True only when metrics come from the debug-build simulator, never in release. */
+    val isTelemetrySimulated: Boolean = false,
     val isBuffering: Boolean = false,
     val reconnectAttempt: Int = 0,
     val maxReconnectAttempts: Int = 5,
@@ -118,10 +122,11 @@ data class LiveUiState(
     val bassGainDb: Float = 0.0f,
     val trebleGainDb: Float = 0.0f,
     val selectedEqPresetName: String = "Flat / Neutral",
-    val videoVuLevel: Float = 0.72f,
-    val micVuLevel: Float = 0.45f,
-    val bgMusicVuLevel: Float = 0.38f,
-    val masterVuLevel: Float = 0.80f,
+    // VU levels require a real audio tap; they stay silent until one exists.
+    val videoVuLevel: Float = 0f,
+    val micVuLevel: Float = 0f,
+    val bgMusicVuLevel: Float = 0f,
+    val masterVuLevel: Float = 0f,
     val storageInfo: StorageInfo = StorageInfo(
         availableBytes = 850 * 1024 * 1024L,
         totalBytes = 64 * 1024 * 1024 * 1024L,
@@ -607,6 +612,7 @@ class LiveViewModel(
     }
 
     fun simulateBandwidthTest() {
+        if (!com.example.BuildConfig.DEBUG) return
         // Simulates running an active speed test to evaluate upload capacity
         val simulatedCapacityKbps = (6000..18000).random()
         setAvailableBandwidth(simulatedCapacityKbps)
@@ -634,10 +640,27 @@ class LiveViewModel(
                 return
             }
 
+            // No RTMP client is integrated yet, so a release build cannot actually transmit. Rather
+            // than reporting a fake LIVE state, refuse to start and say so plainly.
+            if (!com.example.BuildConfig.DEBUG) {
+                addLog(
+                    level = LiveLogLevel.ERROR,
+                    category = LiveLogCategory.RTMP,
+                    message = "Live streaming unavailable: no RTMP client is integrated in this build."
+                )
+                _uiState.value = state.copy(
+                    streamStatus = StreamStatus.OFFLINE,
+                    isBuffering = false,
+                    connectionLossReason = "Fitur live streaming belum tersedia. Koneksi RTMP nyata belum terpasang pada versi ini."
+                )
+                return
+            }
+
             _uiState.value = state.copy(streamStatus = StreamStatus.CONNECTING)
 
             viewModelScope.launch {
                 try {
+                    // Debug-only: stands in for the real RTMP handshake so the UI flow can be tested.
                     delay(1200) // Simulated RTMP handshake
 
                     val session = LiveSessionEntity(
@@ -717,14 +740,18 @@ class LiveViewModel(
         liveTimerJob = viewModelScope.launch {
             var elapsed = 0L
             var loops = 1
-            var totalBitrateSum = 4500L
+            var totalBitrateSum = 0L
             var accumulatedDroppedFrames = 0
             var totalFramesSent = 0L
+            // Bitrate, RTT, jitter, viewers and VU levels have no real source until an RTMP client
+            // is integrated. Only a debug build may fabricate them for UI verification; a release
+            // build leaves them at zero so the UI can render "Tidak tersedia".
+            val simulateTelemetry = com.example.BuildConfig.DEBUG
             val random = Random(1234)
 
-            val bitrateList = mutableListOf(4400, 4450, 4520, 4480, 4550, 4500)
-            val rttList = mutableListOf(118, 122, 119, 125, 121)
-            val jitterList = mutableListOf(4, 5, 8, 6, 5)
+            val bitrateList = _uiState.value.bitrateHistory.toMutableList()
+            val rttList = _uiState.value.rttHistory.toMutableList()
+            val jitterList = _uiState.value.jitterHistory.toMutableList()
             val viewerHistoryList = _uiState.value.viewerHistory.toMutableList()
             val bandwidthHistoryList = _uiState.value.bandwidthHistoryMbps.toMutableList()
             var currentViewerCount = _uiState.value.viewerCount
@@ -747,30 +774,32 @@ class LiveViewModel(
                     loops++
                 }
 
-                val currentBitrate = 4200 + random.nextInt(750)
+                val currentBitrate = if (simulateTelemetry) 4200 + random.nextInt(750) else 0
                 totalBitrateSum += currentBitrate
-                val avgBitrate = (totalBitrateSum / elapsed).toInt()
+                val avgBitrate = if (elapsed > 0) (totalBitrateSum / elapsed).toInt() else 0
 
-                val currentRtt = 110 + random.nextInt(25)
-                val currentJitter = 3 + random.nextInt(7)
+                val currentRtt = if (simulateTelemetry) 110 + random.nextInt(25) else 0
+                val currentJitter = if (simulateTelemetry) 3 + random.nextInt(7) else 0
 
-                // Occasional minor dropped frame simulation under jitter peaks
-                if (currentJitter > 8 && random.nextInt(10) > 6) {
-                    accumulatedDroppedFrames += random.nextInt(3) + 1
+                if (simulateTelemetry) {
+                    // Occasional minor dropped frame simulation under jitter peaks
+                    if (currentJitter > 8 && random.nextInt(10) > 6) {
+                        accumulatedDroppedFrames += random.nextInt(3) + 1
+                    }
+
+                    // Rolling history windows (max 25 entries)
+                    bitrateList.add(currentBitrate)
+                    if (bitrateList.size > 25) bitrateList.removeAt(0)
+
+                    rttList.add(currentRtt)
+                    if (rttList.size > 25) rttList.removeAt(0)
+
+                    jitterList.add(currentJitter)
+                    if (jitterList.size > 25) jitterList.removeAt(0)
                 }
 
-                // Rolling history windows (max 25 entries)
-                bitrateList.add(currentBitrate)
-                if (bitrateList.size > 25) bitrateList.removeAt(0)
-
-                rttList.add(currentRtt)
-                if (rttList.size > 25) rttList.removeAt(0)
-
-                jitterList.add(currentJitter)
-                if (jitterList.size > 25) jitterList.removeAt(0)
-
                 val droppedPct = if (totalFramesSent > 0) (accumulatedDroppedFrames.toFloat() / totalFramesSent) * 100f else 0f
-                val healthScore = when {
+                val healthScore = if (!simulateTelemetry) 0 else when {
                     droppedPct > 2.0f -> 75
                     droppedPct > 0.5f -> 88
                     currentRtt > 150 -> 90
@@ -791,36 +820,55 @@ class LiveViewModel(
                     _uiState.value.storageInfo
                 }
 
-                // Audio Mixer VU Peak Level Calculations
+                // Audio Mixer VU Peak Level Calculations (debug simulation only — no real audio tap yet)
                 val masterFactor = if (_uiState.value.isMasterMuted) 0f else _uiState.value.masterVolume
-                val videoPeak = if (!_uiState.value.isVideoSourceMuted) {
-                    (_uiState.value.videoSourceVolume * (0.65f + random.nextFloat() * 0.30f)).coerceIn(0f, 1f)
-                } else 0f
+                val videoPeak: Float
+                val micPeak: Float
+                val bgPeak: Float
+                val masterPeak: Float
 
-                val micPeak = if (!_uiState.value.isMicInputMuted) {
-                    (_uiState.value.micInputVolume * (0.40f + random.nextFloat() * 0.50f)).coerceIn(0f, 1f)
-                } else 0f
+                if (simulateTelemetry) {
+                    videoPeak = if (!_uiState.value.isVideoSourceMuted) {
+                        (_uiState.value.videoSourceVolume * (0.65f + random.nextFloat() * 0.30f)).coerceIn(0f, 1f)
+                    } else 0f
 
-                val duckingFactor = if (_uiState.value.isMicDuckingEnabled && micPeak > 0.35f) 0.35f else 1.0f
-                val bgPeak = if (!_uiState.value.isBgMusicMuted && _uiState.value.bgMusicTrack != "None") {
-                    (_uiState.value.bgMusicVolume * duckingFactor * (0.50f + random.nextFloat() * 0.30f)).coerceIn(0f, 1f)
-                } else 0f
+                    micPeak = if (!_uiState.value.isMicInputMuted) {
+                        (_uiState.value.micInputVolume * (0.40f + random.nextFloat() * 0.50f)).coerceIn(0f, 1f)
+                    } else 0f
 
-                val masterPeak = (((videoPeak * 0.5f) + (micPeak * 0.6f) + (bgPeak * 0.4f)) * masterFactor).coerceIn(0f, 1f)
+                    val duckingFactor = if (_uiState.value.isMicDuckingEnabled && micPeak > 0.35f) 0.35f else 1.0f
+                    bgPeak = if (!_uiState.value.isBgMusicMuted && _uiState.value.bgMusicTrack != "None") {
+                        (_uiState.value.bgMusicVolume * duckingFactor * (0.50f + random.nextFloat() * 0.30f)).coerceIn(0f, 1f)
+                    } else 0f
 
-                // Live Viewer Count & Bandwidth Fluctuation Simulation
-                val viewerChange = random.nextInt(25) - 10
-                currentViewerCount = (currentViewerCount + viewerChange).coerceIn(100, 50000)
+                    masterPeak = (((videoPeak * 0.5f) + (micPeak * 0.6f) + (bgPeak * 0.4f)) * masterFactor).coerceIn(0f, 1f)
+                } else {
+                    // Release: VU stays at 0 (no real audio metering source)
+                    videoPeak = 0f
+                    micPeak = 0f
+                    bgPeak = 0f
+                    masterPeak = 0f
+                }
+
+                // Live Viewer Count & Bandwidth Fluctuation (debug simulation only)
+                val viewerChange = if (simulateTelemetry) random.nextInt(25) - 10 else 0
+                currentViewerCount = (currentViewerCount + viewerChange).coerceIn(0, 50000)
                 if (currentViewerCount > peakViewerCount) {
                     peakViewerCount = currentViewerCount
                 }
                 viewerHistoryList.add(currentViewerCount)
                 if (viewerHistoryList.size > 25) viewerHistoryList.removeAt(0)
 
-                val currentBandwidthMbps = (currentBitrate / 1000f) + (random.nextFloat() * 1.2f - 0.6f)
-                val clampedBandwidthMbps = currentBandwidthMbps.coerceIn(1.0f, 25.0f)
-                bandwidthHistoryList.add(clampedBandwidthMbps)
-                if (bandwidthHistoryList.size > 25) bandwidthHistoryList.removeAt(0)
+                val currentBandwidthMbps = if (simulateTelemetry) {
+                    (currentBitrate / 1000f) + (random.nextFloat() * 1.2f - 0.6f)
+                } else {
+                    0f
+                }
+                val clampedBandwidthMbps = currentBandwidthMbps.coerceIn(0f, 25.0f)
+                if (simulateTelemetry) {
+                    bandwidthHistoryList.add(clampedBandwidthMbps)
+                    if (bandwidthHistoryList.size > 25) bandwidthHistoryList.removeAt(0)
+                }
 
                 _uiState.value = _uiState.value.copy(
                     liveDurationSec = elapsed,
@@ -839,31 +887,34 @@ class LiveViewModel(
                     droppedFrames = accumulatedDroppedFrames,
                     totalFrames = totalFramesSent,
                     healthScorePct = healthScore,
-                    bufferHealthPct = (95f + random.nextFloat() * 4f).coerceAtMost(100f),
+                    bufferHealthPct = if (simulateTelemetry) (95f + random.nextFloat() * 4f).coerceAtMost(100f) else 0f,
                     thermalState = thermalInfo.level.label,
                     thermalInfo = thermalInfo,
                     storageInfo = currentStorageInfo,
                     videoVuLevel = videoPeak,
                     micVuLevel = micPeak,
                     bgMusicVuLevel = bgPeak,
-                    masterVuLevel = masterPeak
+                    masterVuLevel = masterPeak,
+                    isTelemetrySimulated = simulateTelemetry
                 )
 
-                // Update session in DB periodically
-                repository.updateLiveSession(
-                    LiveSessionEntity(
-                        id = sessionId,
-                        platform = _uiState.value.platform.name,
-                        streamTitle = _uiState.value.streamTitle,
-                        rtmpUrl = _uiState.value.rtmpUrl,
-                        sourceUri = _uiState.value.sourceUri ?: "",
-                        durationSec = elapsed,
-                        totalLoops = loops,
-                        status = "ACTIVE",
-                        avgBitrateKbps = avgBitrate,
-                        droppedFrames = accumulatedDroppedFrames
+                if (simulateTelemetry) {
+                    // Update session in DB periodically
+                    repository.updateLiveSession(
+                        LiveSessionEntity(
+                            id = sessionId,
+                            platform = _uiState.value.platform.name,
+                            streamTitle = _uiState.value.streamTitle,
+                            rtmpUrl = _uiState.value.rtmpUrl,
+                            sourceUri = _uiState.value.sourceUri ?: "",
+                            durationSec = elapsed,
+                            totalLoops = loops,
+                            status = "ACTIVE",
+                            avgBitrateKbps = avgBitrate,
+                            droppedFrames = accumulatedDroppedFrames
+                        )
                     )
-                )
+                }
             }
         }
     }
@@ -923,8 +974,9 @@ class LiveViewModel(
                     // Simulate/Perform RTMP Handshake retry safely
                     delay(1200)
 
-                    // Success on retry
-                    val isReconnected = (attempt >= 2) || (Random.nextFloat() > 0.3f)
+                    // Reconnect success is fabricated; only a debug build may report it.
+                    val isReconnected = com.example.BuildConfig.DEBUG &&
+                        ((attempt >= 2) || (Random.nextFloat() > 0.3f))
 
                     if (isReconnected) {
                         addLog(
@@ -990,6 +1042,7 @@ class LiveViewModel(
      * Manually triggers connection loss simulation for user testing & visual verification of buffering state indicator.
      */
     fun simulateConnectionLoss(context: Context? = null) {
+        if (!com.example.BuildConfig.DEBUG) return
         if (_uiState.value.streamStatus == StreamStatus.LIVE) {
             handleNetworkLoss("Simulated active network drop / socket timeout", context)
         } else {
@@ -1081,8 +1134,10 @@ class LiveViewModel(
 
     /**
      * Simulates or tests thermal warning state with PowerManager throttling status.
+     * Guarded: Debug only.
      */
     fun simulateThermalWarning() {
+        if (!com.example.BuildConfig.DEBUG) return
         val simulatedTemp = 45.2f
         val systemCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             android.os.PowerManager.THERMAL_STATUS_SEVERE
@@ -1109,8 +1164,10 @@ class LiveViewModel(
 
     /**
      * Simulates a low storage warning state (<500MB available) for testing.
+     * Guarded: Debug only.
      */
     fun simulateLowStorageAlert() {
+        if (!com.example.BuildConfig.DEBUG) return
         val simulatedMb = 320L
         _uiState.value = _uiState.value.copy(
             storageInfo = StorageInfo(
@@ -1140,6 +1197,7 @@ class LiveViewModel(
     private var logSimulateIndex = 0
 
     fun simulateLogEvent() {
+        if (!com.example.BuildConfig.DEBUG) return
         val samples = listOf(
             Triple(LiveLogLevel.INFO, LiveLogCategory.ENCODER, "Video encoder re-negotiating keyframe interval (GOP = 120 frames @ 60fps)"),
             Triple(LiveLogLevel.WARN, LiveLogCategory.NETWORK, "Network socket congestion detected: RTT increased to 185ms (Bitrate buffered)"),

@@ -607,9 +607,14 @@ internal fun AudioWaveformCanvasCard(
                         )
                     }
 
+                    // Waveform and spectrum need real analysis output. When it is absent we skip only
+                    // those blocks instead of returning from the Canvas, so the EQ curve, playhead and
+                    // VU meters -- which derive from actual settings -- stay on screen.
+                    val realWaveformPoints = analysisData?.waveformPoints ?: emptyList()
+
                     // 2. Pure Time-Domain Oscillating Audio Waveform (WAVEFORM mode)
-                    if (selectedVisualMode == "WAVEFORM") {
-                        val points = analysisData?.waveformPoints ?: List(60) { 0.4f }
+                    if (selectedVisualMode == "WAVEFORM" && realWaveformPoints.isNotEmpty()) {
+                        val points = realWaveformPoints
                         val pointCount = points.size
                         val barWidth = availableWidth / pointCount.toFloat()
                         val gainScale = 10.0.pow((animInputGain + animOutputGain) / 20.0).toFloat()
@@ -750,8 +755,10 @@ internal fun AudioWaveformCanvasCard(
                     }
 
                     // 3. Real-Time Audio Frequency Spectrum Bars (when FULL or SPECTRUM mode)
-                    if (selectedVisualMode == "FULL" || selectedVisualMode == "SPECTRUM") {
-                        val points = analysisData?.waveformPoints ?: List(50) { 0.35f }
+                    if ((selectedVisualMode == "FULL" || selectedVisualMode == "SPECTRUM") &&
+                        realWaveformPoints.isNotEmpty()
+                    ) {
+                        val points = realWaveformPoints
                         val barCount = points.size
                         val barWidth = (availableWidth / barCount).coerceAtLeast(2.5f)
 
@@ -1058,12 +1065,16 @@ internal fun AudioWaveformCanvasCard(
                 Spacer(modifier = Modifier.height(12.dp))
                 
                 // Real-time calculation of peak and quiet zones
-                val pts = analysisData?.waveformPoints ?: List(100) { 0.4f }
-                val ptCount = pts.size
-                var peakCount = 0
-                var quietCount = 0
-                
-                pts.forEachIndexed { idx, valNorm ->
+                // Return empty instead of fake flat array
+                val pts = analysisData?.waveformPoints ?: emptyList()
+                if (pts.isEmpty()) {
+                    Text("Analisis audio belum tersedia.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                } else {
+                    val ptCount = pts.size
+                    var peakCount = 0
+                    var quietCount = 0
+
+                    pts.forEachIndexed { idx, valNorm ->
                     val xNorm = idx.toFloat() / ptCount.toFloat()
                     val eqGain = calculateEqGainNormalized(
                         xNorm = xNorm,
@@ -1259,6 +1270,7 @@ internal fun AudioWaveformCanvasCard(
                         )
                     }
                 }
+                } // end of "analysis data available" branch
             }
         }
     }

@@ -142,17 +142,19 @@ fun LiveLogViewerCard(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Simulate Event Button
-                    IconButton(
-                        onClick = onSimulateLogEvent,
-                        modifier = Modifier.testTag("simulate_log_event_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Simulate Real-time Event",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    // Simulate Event Button (debug builds only)
+                    if (com.example.BuildConfig.DEBUG) {
+                        IconButton(
+                            onClick = onSimulateLogEvent,
+                            modifier = Modifier.testTag("simulate_log_event_button")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Simulate Real-time Event",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     // Auto-Scroll Toggle Button

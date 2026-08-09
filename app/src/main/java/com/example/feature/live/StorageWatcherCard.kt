@@ -243,8 +243,8 @@ fun StorageWatcherCard(
                 }
             }
 
-            // Test Simulation Trigger (if storage is normal)
-            if (!isCritical && !isWarning) {
+            // Test Simulation Trigger (debug builds only, when storage is normal)
+            if (com.example.BuildConfig.DEBUG && !isCritical && !isWarning) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End

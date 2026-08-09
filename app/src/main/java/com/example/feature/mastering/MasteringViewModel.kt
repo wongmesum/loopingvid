@@ -13,7 +13,6 @@ import com.example.core.media.CompressorConfig
 import com.example.core.media.EqBandConfig
 import com.example.core.media.MasteringPreset
 import com.example.core.media.AutoLevelingConfig
-import com.example.core.media.WaveformAnalyzer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -239,11 +238,12 @@ class MasteringViewModel(
     fun clearHistory() { undoRedoManager.clear() }
 
     fun onAudioSelected(uri: String, fileName: String) {
-        val analysis = WaveformAnalyzer.generateSimulatedWaveform()
+        // Analysis data will be populated by AudioAnalysisRepository integration (Checkpoint 2).
+        // Until then, null signals "analysis pending" and UI shows placeholder.
         _uiState.value = _uiState.value.copy(
             selectedAudioUri = uri,
             selectedAudioName = fileName,
-            analysisData = analysis
+            analysisData = null
         )
         recalculateLufs()
         undoRedoManager.clear()

@@ -478,13 +478,14 @@ private fun CameraXPreviewBox(
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "CameraX Live Viewfinder (Emulator Mode)",
+                            text = "Kamera tidak tersedia",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(2.dp))
+                        // Do not claim a simulated 1080p60 feed: nothing is being captured here.
                         Text(
-                            text = "Hardware sensor fallback active • 1080p 60fps feed simulated",
+                            text = "Perangkat ini tidak mengirim gambar kamera. Tidak ada pratinjau langsung.",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.LightGray
                         )

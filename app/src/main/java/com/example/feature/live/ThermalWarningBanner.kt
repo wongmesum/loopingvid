@@ -201,8 +201,8 @@ fun ThermalWarningBanner(
                 }
             }
 
-            // Normal mode quick test action
-            if (!level.isWarning) {
+            // Normal mode quick test action (debug builds only)
+            if (com.example.BuildConfig.DEBUG && !level.isWarning) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,

@@ -592,7 +592,9 @@ private fun BufferHealthBanner(
                 )
             }
 
-            if (onSimulateNetworkLoss != null && streamStatus == StreamStatus.LIVE) {
+            // Debug-only: the ViewModel no-ops this in release, so showing the button there
+            // would leave a dead control in the UI.
+            if (com.example.BuildConfig.DEBUG && onSimulateNetworkLoss != null && streamStatus == StreamStatus.LIVE) {
                 Spacer(modifier = Modifier.width(8.dp))
                 androidx.compose.material3.OutlinedButton(
                     onClick = onSimulateNetworkLoss,

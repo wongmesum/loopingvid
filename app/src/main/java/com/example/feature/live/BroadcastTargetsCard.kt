@@ -230,20 +230,23 @@ fun BroadcastTargetsCard(
                         )
                     }
 
-                    OutlinedButton(
-                        onClick = onRunSpeedTest,
-                        modifier = Modifier
-                            .height(30.dp)
-                            .testTag("run_speed_test_button"),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.NetworkCheck,
-                            contentDescription = "Run Speed Test",
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Speed", fontSize = 11.sp)
+                    // Speed test simulation button (debug builds only)
+                    if (com.example.BuildConfig.DEBUG) {
+                        OutlinedButton(
+                            onClick = onRunSpeedTest,
+                            modifier = Modifier
+                                .height(30.dp)
+                                .testTag("run_speed_test_button"),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NetworkCheck,
+                                contentDescription = "Run Speed Test",
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Test Speed", fontSize = 11.sp)
+                        }
                     }
                 }
 

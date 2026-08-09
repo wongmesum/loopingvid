@@ -89,7 +89,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Locale
 import com.example.core.media.AudioAnalysisData
-import com.example.core.media.WaveformAnalyzer
 import androidx.compose.material3.Switch
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
@@ -169,11 +168,8 @@ fun Media3SegmentTrimmer(
         }
     }
     
-    LaunchedEffect(totalDurationMs) {
-        if (totalDurationMs > 0L && audioAnalysisData == null) {
-            audioAnalysisData = WaveformAnalyzer.generateSimulatedWaveform(durationMs = totalDurationMs)
-        }
-    }
+    // Real analysis is provided by AudioAnalysisRepository when a media asset is loaded.
+    // The trimmer renders "no waveform" until real data arrives — never simulated data.
 
     // Monitor position and duration, lock playback between startMs and endMs
     LaunchedEffect(exoPlayer, startMs, endMs, isPlaying) {
