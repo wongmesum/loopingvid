@@ -13,6 +13,8 @@ import com.example.core.media.CompressorConfig
 import com.example.core.media.EqBandConfig
 import com.example.core.media.MasteringPreset
 import com.example.core.media.AutoLevelingConfig
+import com.example.core.audio.AudioAnalysisRepository
+import com.example.core.media.toAudioAnalysisData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,8 +23,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 import android.content.Context
+import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
+import timber.log.Timber
 
 import com.example.core.media.NoiseReductionConfig
 import com.example.core.media.VisualizerTheme
@@ -56,7 +60,9 @@ data class MasteringUiState(
 
 class MasteringViewModel(
     private val mediaProcessor: MediaProcessor,
-    private val context: Context? = null
+    private val context: Context? = null,
+    // Nullable so existing tests and call sites without an analyzer still construct.
+    private val audioAnalysisRepository: AudioAnalysisRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MasteringUiState())
@@ -238,8 +244,8 @@ class MasteringViewModel(
     fun clearHistory() { undoRedoManager.clear() }
 
     fun onAudioSelected(uri: String, fileName: String) {
-        // Analysis data will be populated by AudioAnalysisRepository integration (Checkpoint 2).
-        // Until then, null signals "analysis pending" and UI shows placeholder.
+        // Clear stale analysis immediately: the UI must not show the previous track's waveform
+        // while the new one is still being decoded.
         _uiState.value = _uiState.value.copy(
             selectedAudioUri = uri,
             selectedAudioName = fileName,
@@ -247,6 +253,27 @@ class MasteringViewModel(
         )
         recalculateLufs()
         undoRedoManager.clear()
+        loadAnalysisFor(uri)
+    }
+
+    /**
+     * Runs (or reads from cache) a real analysis pass for [uri]. Results are dropped if the user
+     * has already moved to a different track, so a slow decode cannot overwrite newer state.
+     */
+    private fun loadAnalysisFor(uri: String) {
+        val repository = audioAnalysisRepository ?: return
+
+        viewModelScope.launch {
+            repository.getOrAnalyze(Uri.parse(uri))
+                .onSuccess { result ->
+                    if (_uiState.value.selectedAudioUri != uri) return@onSuccess
+                    _uiState.update { it.copy(analysisData = result.toAudioAnalysisData()) }
+                    recalculateLufs()
+                }
+                .onFailure { error ->
+                    Timber.e(error, "Audio analysis failed for %s", uri)
+                }
+        }
     }
 
     fun applyPreset(preset: MasteringPreset) {

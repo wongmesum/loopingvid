@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.core.audio.AudioAnalysisRepository
 import com.example.core.ui.ExportViewModel
 import com.example.core.work.ExportQueueViewModel
 import com.example.feature.about.AboutScreen
@@ -54,6 +55,7 @@ fun AppNavHost(
     visualizerViewModel: VisualizerViewModel,
     exportViewModel: ExportViewModel,
     exportQueueViewModel: ExportQueueViewModel?,
+    audioAnalysisRepository: AudioAnalysisRepository? = null,
     passedLiveSourceUri: String?,
     onNavigateToGoLive: (String) -> Unit,
     onStartOnboarding: () -> Unit,
@@ -117,7 +119,13 @@ fun AppNavHost(
             MasteringScreen(exportViewModel = exportViewModel, viewModel = masteringViewModel, onNavigateToGoLive = onNavigateToGoLive)
         }
         composable(NavDestination.Editor.route) {
-            EditorScreen(exportViewModel = exportViewModel, viewModel = editorViewModel, exportQueueViewModel = exportQueueViewModel, onNavigateToGoLive = onNavigateToGoLive)
+            EditorScreen(
+                exportViewModel = exportViewModel,
+                viewModel = editorViewModel,
+                exportQueueViewModel = exportQueueViewModel,
+                audioAnalysisRepository = audioAnalysisRepository,
+                onNavigateToGoLive = onNavigateToGoLive
+            )
         }
         composable(NavDestination.Slideshow.route) {
             SlideshowScreen(viewModel = slideshowViewModel, onNavigateToGoLive = onNavigateToGoLive)

@@ -88,10 +88,11 @@ import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Locale
+import com.example.core.audio.AudioAnalysisRepository
 import com.example.core.media.AudioAnalysisData
+import com.example.core.media.toAudioAnalysisData
 import androidx.compose.material3.Switch
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Path
+import timber.log.Timber
 
 /**
  * Modern Media3-backed UI Component for precise video segment trimming.
@@ -106,7 +107,8 @@ fun Media3SegmentTrimmer(
     initialStartMs: Long = 0L,
     initialEndMs: Long = 0L,
     onTrimChange: ((startMs: Long, endMs: Long) -> Unit)? = null,
-    onApplyTrimmedSegment: ((startMs: Long, endMs: Long) -> Unit)? = null
+    onApplyTrimmedSegment: ((startMs: Long, endMs: Long) -> Unit)? = null,
+    audioAnalysisRepository: AudioAnalysisRepository? = null
 ) {
     val context = LocalContext.current
 
@@ -122,10 +124,30 @@ fun Media3SegmentTrimmer(
     var panOffset by remember { mutableStateOf(Offset.Zero) }
     var isScrubbingActive by remember { mutableStateOf(false) }
     var scrubTimeDisplayMs by remember { mutableLongStateOf(0L) }
-    
+
     var audioAnalysisData by remember { mutableStateOf<AudioAnalysisData?>(null) }
     var snapToBeat by remember { mutableStateOf(false) }
-    
+
+    LaunchedEffect(mediaUri, audioAnalysisRepository) {
+        audioAnalysisData = null
+        if (mediaUri.isNullOrEmpty() || audioAnalysisRepository == null) return@LaunchedEffect
+
+        val uri = try {
+            Uri.parse(mediaUri)
+        } catch (error: Exception) {
+            Timber.e(error, "Invalid media URI for audio analysis")
+            return@LaunchedEffect
+        }
+
+        audioAnalysisRepository.getOrAnalyze(uri)
+            .onSuccess { result ->
+                audioAnalysisData = result.toAudioAnalysisData()
+            }
+            .onFailure { error ->
+                Timber.e(error, "Audio analysis failed for trimmer media")
+            }
+    }
+
     fun snapToNearestBeat(timeMs: Long): Long {
         if (!snapToBeat || audioAnalysisData == null) return timeMs
         val beats = audioAnalysisData!!.beatMarkersMs
@@ -168,9 +190,6 @@ fun Media3SegmentTrimmer(
         }
     }
     
-    // Real analysis is provided by AudioAnalysisRepository when a media asset is loaded.
-    // The trimmer renders "no waveform" until real data arrives — never simulated data.
-
     // Monitor position and duration, lock playback between startMs and endMs
     LaunchedEffect(exoPlayer, startMs, endMs, isPlaying) {
         while (isActive) {
@@ -595,33 +614,35 @@ fun Media3SegmentTrimmer(
                                 val width = size.width
                                 val height = size.height
                                 val points = analysis.waveformPoints
-                                val barWidth = width / points.size
+
                                 val primaryColor = Color.Cyan.copy(alpha = 0.5f)
-                                
-                                val path = Path()
-                                path.moveTo(0f, height / 2f)
-                                
-                                points.forEachIndexed { index, value ->
-                                    val x = index * barWidth
-                                    val yOffset = (value * height / 2f)
-                                    drawLine(
-                                        color = primaryColor,
-                                        start = Offset(x, height / 2f - yOffset),
-                                        end = Offset(x, height / 2f + yOffset),
-                                        strokeWidth = barWidth * 0.8f
-                                    )
+
+                                if (points.isNotEmpty()) {
+                                    val barWidth = width / points.size
+                                    points.forEachIndexed { index, value ->
+                                        val x = index * barWidth
+                                        val yOffset = (value * height / 2f)
+                                        drawLine(
+                                            color = primaryColor,
+                                            start = Offset(x, height / 2f - yOffset),
+                                            end = Offset(x, height / 2f + yOffset),
+                                            strokeWidth = barWidth * 0.8f
+                                        )
+                                    }
                                 }
-                                
+
                                 // Draw beat markers
                                 val beatColor = Color.White.copy(alpha = 0.6f)
-                                analysis.beatMarkersMs.forEach { beatMs ->
-                                    val x = (beatMs.toFloat() / analysis.durationMs.toFloat()) * width
-                                    drawLine(
-                                        color = beatColor,
-                                        start = Offset(x, 0f),
-                                        end = Offset(x, height),
-                                        strokeWidth = 2f
-                                    )
+                                if (analysis.durationMs > 0L) {
+                                    analysis.beatMarkersMs.forEach { beatMs ->
+                                        val x = (beatMs.toFloat() / analysis.durationMs.toFloat()) * width
+                                        drawLine(
+                                            color = beatColor,
+                                            start = Offset(x, 0f),
+                                            end = Offset(x, height),
+                                            strokeWidth = 2f
+                                        )
+                                    }
                                 }
                             }
                         }

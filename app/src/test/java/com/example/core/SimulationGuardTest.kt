@@ -68,11 +68,10 @@ class SimulationGuardTest {
     @Test
     fun `production path must not call generateSimulatedWaveform`() {
         val violations = mutableListOf<String>()
-        val excludedFiles = setOf("WaveformAnalyzer.kt") // The definition itself is fine
         var scannedFiles = 0
 
         mainSourceRoot.walkTopDown()
-            .filter { it.isFile && it.extension == "kt" && it.name !in excludedFiles }
+            .filter { it.isFile && it.extension == "kt" }
             .forEach { file ->
                 scannedFiles++
                 file.readLines().forEachIndexed { lineIndex, line ->
@@ -258,6 +257,45 @@ class SimulationGuardTest {
         assertFalse(
             "CameraX fallback must not advertise a simulated 1080p60 feed",
             content.contains("feed simulated") || content.contains("Emulator Mode")
+        )
+    }
+
+    /**
+     * The simulated waveform generator is gone for good. Keeping the file around would let a
+     * future caller reintroduce fabricated audio data with a one-line import.
+     */
+    @Test
+    fun `simulated waveform generator source file must not exist`() {
+        val legacyAnalyzer = File(mainSourceRoot, "core/media/WaveformAnalyzer.kt")
+
+        assertFalse(
+            "core/media/WaveformAnalyzer.kt must stay deleted — real analysis comes from " +
+                "AudioAnalysisRepository. Found it at ${legacyAnalyzer.absolutePath}",
+            legacyAnalyzer.exists()
+        )
+    }
+
+    /**
+     * The mastering ViewModels and the segment trimmer must obtain their waveform from the real
+     * analyzer. If these references disappear, the UI has silently lost its only real data source.
+     */
+    @Test
+    fun `mastering and trimmer must consume the real analysis repository`() {
+        val consumers = listOf(
+            "feature/mastering/MasteringViewModel.kt",
+            "feature/mastering/AudioMasteringViewModel.kt",
+            "core/ui/Media3SegmentTrimmer.kt"
+        )
+
+        val missing = consumers.filterNot { path ->
+            val content = readMainSource(path)
+            content.contains("AudioAnalysisRepository") && content.contains("toAudioAnalysisData")
+        }
+
+        assertTrue(
+            "These files must read real analysis via AudioAnalysisRepository.getOrAnalyze() and " +
+                "map it with toAudioAnalysisData(): $missing",
+            missing.isEmpty()
         )
     }
 }

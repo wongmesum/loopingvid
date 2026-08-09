@@ -63,6 +63,7 @@ fun MainScreen(
     visualizerViewModel: VisualizerViewModel,
     exportViewModel: ExportViewModel,
     exportQueueViewModel: ExportQueueViewModel? = null,
+    audioAnalysisRepository: com.example.core.audio.AudioAnalysisRepository? = null,
     navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -245,6 +246,7 @@ fun MainScreen(
                     visualizerViewModel = visualizerViewModel,
                     exportViewModel = exportViewModel,
                     exportQueueViewModel = exportQueueViewModel,
+                    audioAnalysisRepository = audioAnalysisRepository,
                     passedLiveSourceUri = passedLiveSourceUri,
                     onNavigateToGoLive = ::navigateToGoLive,
                     onStartOnboarding = ::startOnboardingTour,

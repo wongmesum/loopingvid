@@ -61,9 +61,10 @@ class MainActivity : ComponentActivity() {
         repository.firestoreSyncManager = firestoreSyncManager
 
         val mediaProcessor = MediaProcessor(applicationContext, repository)
+        val audioAnalysisRepository = AudioAnalysisRepository(applicationContext)
 
         val loopViewModel = LoopViewModel(mediaProcessor)
-        val masteringViewModel = MasteringViewModel(mediaProcessor, applicationContext)
+        val masteringViewModel = MasteringViewModel(mediaProcessor, applicationContext, audioAnalysisRepository)
         val editorViewModel = EditorViewModel(mediaProcessor, applicationContext)
         val liveViewModel = LiveViewModel(repository)
         val historyViewModel = HistoryViewModel(repository, firestoreSyncManager)
@@ -72,7 +73,6 @@ class MainActivity : ComponentActivity() {
         val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
         val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
         val visualizerProcessor = VisualizerProcessor(applicationContext, repository)
-        val audioAnalysisRepository = AudioAnalysisRepository(applicationContext)
         val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor, audioAnalysisRepository)
         val exportViewModel = com.example.core.ui.ExportViewModel(mediaProcessor)
         val exportQueueViewModel = com.example.core.work.ExportQueueViewModel(application)
@@ -90,7 +90,8 @@ class MainActivity : ComponentActivity() {
                     slideshowViewModel = slideshowViewModel,
                     visualizerViewModel = visualizerViewModel,
                     exportViewModel = exportViewModel,
-                    exportQueueViewModel = exportQueueViewModel
+                    exportQueueViewModel = exportQueueViewModel,
+                    audioAnalysisRepository = audioAnalysisRepository
                 )
             }
         }

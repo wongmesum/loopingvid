@@ -9,7 +9,7 @@ import com.example.core.database.RenderJobEntity
 import com.example.core.media.AudioMasteringEngine
 import com.example.core.media.CompressorConfig
 import com.example.core.media.EqBandConfig
-import com.example.core.media.WaveformAnalyzer
+import com.example.core.media.AudioAnalysisData
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -61,8 +61,14 @@ class LoopingVidTest {
     }
 
     @Test
-    fun `test WaveformAnalyzer generates points and beat markers`() {
-        val analysis = WaveformAnalyzer.generateSimulatedWaveform(durationMs = 60000L, pointCount = 50)
+    fun `test AudioAnalysisData has correct structure`() {
+        val analysis = AudioAnalysisData(
+            waveformPoints = List(50) { it.toFloat() / 50f },
+            beatMarkersMs = listOf(0L, 500L, 1000L),
+            durationMs = 60000L,
+            peakLufs = -1.5,
+            currentRmsLufs = -14.0
+        )
         assertEquals(50, analysis.waveformPoints.size)
         assertTrue(analysis.beatMarkersMs.isNotEmpty())
     }

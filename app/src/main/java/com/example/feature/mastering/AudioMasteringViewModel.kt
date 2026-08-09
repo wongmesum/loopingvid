@@ -14,6 +14,8 @@ import com.example.core.media.EqBandConfig
 import com.example.core.media.ExoPlayerAudioProcessor
 import com.example.core.media.Media3SpectrumAudioProcessor
 import com.example.core.media.NoiseReductionConfig
+import com.example.core.audio.AudioAnalysisRepository
+import com.example.core.media.toAudioAnalysisData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,7 +94,10 @@ data class AudioMasteringState(
  * and Media3SpectrumAudioProcessor for real-time gain, normalization, pitch/speed, and equalization.
  */
 @OptIn(UnstableApi::class)
-class AudioMasteringViewModel : ViewModel() {
+class AudioMasteringViewModel(
+    // Nullable so existing call sites without an analyzer still construct.
+    private val audioAnalysisRepository: AudioAnalysisRepository? = null
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AudioMasteringState())
     val uiState: StateFlow<AudioMasteringState> = _uiState.asStateFlow()
@@ -119,8 +124,8 @@ class AudioMasteringViewModel : ViewModel() {
     }
 
     fun loadAudioTrack(uri: String, title: String) {
-        // Analysis data will be populated by AudioAnalysisRepository integration (Checkpoint 2).
-        // Until then, null signals "analysis pending" and UI shows placeholder.
+        // Clear stale analysis immediately: the UI must not show the previous track's waveform
+        // while the new one is still being decoded.
         _uiState.update {
             it.copy(
                 audioUri = uri,
@@ -129,6 +134,27 @@ class AudioMasteringViewModel : ViewModel() {
             )
         }
         recalculateMasteringMetrics()
+        loadAnalysisFor(uri)
+    }
+
+    /**
+     * Runs (or reads from cache) a real analysis pass for [uri]. Results are dropped if the user
+     * has already moved to a different track, so a slow decode cannot overwrite newer state.
+     */
+    private fun loadAnalysisFor(uri: String) {
+        val repository = audioAnalysisRepository ?: return
+
+        viewModelScope.launch {
+            repository.getOrAnalyze(android.net.Uri.parse(uri))
+                .onSuccess { result ->
+                    if (_uiState.value.audioUri != uri) return@onSuccess
+                    _uiState.update { it.copy(analysisData = result.toAudioAnalysisData()) }
+                    recalculateMasteringMetrics()
+                }
+                .onFailure { error ->
+                    timber.log.Timber.e(error, "Audio analysis failed for %s", uri)
+                }
+        }
     }
 
     fun setPlaybackSpeed(speed: Float) {

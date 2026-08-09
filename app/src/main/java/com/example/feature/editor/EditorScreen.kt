@@ -110,6 +110,7 @@ fun EditorScreen(
     exportViewModel: com.example.core.ui.ExportViewModel,
     viewModel: EditorViewModel,
     exportQueueViewModel: ExportQueueViewModel? = null,
+    audioAnalysisRepository: com.example.core.audio.AudioAnalysisRepository? = null,
     onNavigateToGoLive: (sourceUri: String) -> Unit
 ) {
     var isLoading by remember { mutableStateOf(true) }
@@ -636,7 +637,8 @@ fun EditorScreen(
                                 },
                                 onApplyTrimmedSegment = { startMs, endMs ->
                                     viewModel.commitTrimChange(startMs / 1000.0, endMs / 1000.0)
-                                }
+                                },
+                                audioAnalysisRepository = audioAnalysisRepository
                             )
                         }
 
@@ -981,7 +983,8 @@ fun EditorScreen(
                                     initialStartMs = (uiState.trimStartSec * 1000).toLong(),
                                     initialEndMs = (uiState.trimEndSec * 1000).toLong(),
                                     onTrimChange = { startMs, endMs -> viewModel.updateTrimPreview(startMs / 1000.0, endMs / 1000.0) },
-                                    onApplyTrimmedSegment = { startMs, endMs -> viewModel.commitTrimChange(startMs / 1000.0, endMs / 1000.0) }
+                                    onApplyTrimmedSegment = { startMs, endMs -> viewModel.commitTrimChange(startMs / 1000.0, endMs / 1000.0) },
+                                    audioAnalysisRepository = audioAnalysisRepository
                                 )
                             }
 
