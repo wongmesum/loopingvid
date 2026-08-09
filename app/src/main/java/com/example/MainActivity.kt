@@ -75,13 +75,14 @@ class MainActivity : ComponentActivity() {
         val historyViewModel = HistoryViewModel(repository, firestoreSyncManager)
         val projectManagerViewModel = ProjectManagerViewModel(repository, projectSnapshotRepository)
         val settingsViewModel = SettingsViewModel(repository)
-        val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
-        val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
-        val visualizerProcessor = VisualizerProcessor(applicationContext, repository)
-        val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor, audioAnalysisRepository)
         val assetManagerViewModel = AssetManagerViewModel(assetRepository)
         val exportViewModel = com.example.core.ui.ExportViewModel(mediaProcessor)
         val exportQueueViewModel = com.example.core.work.ExportQueueViewModel(application)
+
+        val slideshowProcessor = SlideshowProcessor(applicationContext, repository)
+        val slideshowViewModel = SlideshowViewModel(slideshowProcessor, exportQueueViewModel)
+        val visualizerProcessor = VisualizerProcessor(applicationContext, repository)
+        val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor, audioAnalysisRepository, exportQueueViewModel)
 
         setContent {
             LoopingVidTheme {

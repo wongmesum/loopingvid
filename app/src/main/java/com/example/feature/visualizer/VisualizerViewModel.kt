@@ -10,6 +10,10 @@ import com.example.core.audio.AudioAnalysisResult
 import com.example.core.ffmpeg.JobProgressState
 import com.example.core.ffmpeg.VisualizerProcessor
 import com.example.core.ffmpeg.VisualizerRenderRequest
+import com.example.core.work.BatchExportRequest
+import com.example.core.work.ExportQueueViewModel
+import com.example.core.work.QueueStatus
+import com.example.core.work.RenderRequestSerializer
 import com.example.core.media.Media3SpectrumAudioProcessor
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -29,6 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class VisualizerUiState(
     val audioUri: String? = null,
@@ -42,6 +47,8 @@ data class VisualizerUiState(
     val beatSync: BeatSyncState = BeatSyncState(),
     val outputName: String = "",
     val jobProgress: JobProgressState = JobProgressState(),
+    /** Work id of the render this screen enqueued, used to track and cancel it. */
+    val exportJobId: UUID? = null,
     val validationMessage: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
@@ -58,6 +65,7 @@ data class VisualizerUiState(
             beatSync == other.beatSync &&
             outputName == other.outputName &&
             jobProgress == other.jobProgress &&
+            exportJobId == other.exportJobId &&
             validationMessage == other.validationMessage
     }
 
@@ -81,7 +89,8 @@ data class VisualizerUiState(
 class VisualizerViewModel(
     private val appContext: Context? = null,
     private val visualizerProcessor: VisualizerProcessor? = null,
-    private val audioAnalysisRepository: AudioAnalysisRepository? = null
+    private val audioAnalysisRepository: AudioAnalysisRepository? = null,
+    private val exportQueueViewModel: ExportQueueViewModel? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VisualizerUiState())
@@ -98,10 +107,36 @@ class VisualizerViewModel(
     private var fullAnalysisJob: Job? = null
 
     init {
-        visualizerProcessor?.let { processor ->
+        // Fallback: observe processor progress directly when no queue is injected.
+        if (exportQueueViewModel == null) {
+            visualizerProcessor?.let { processor ->
+                viewModelScope.launch {
+                    processor.progressState.collect { progress ->
+                        _uiState.update { it.copy(jobProgress = progress) }
+                    }
+                }
+            }
+        }
+
+        // Primary: observe queue state and map back to JobProgressState for this job.
+        exportQueueViewModel?.let { queue ->
             viewModelScope.launch {
-                processor.progressState.collect { progress ->
-                    _uiState.update { it.copy(jobProgress = progress) }
+                queue.uiState.collect { queueState ->
+                    val currentJobId = _uiState.value.exportJobId ?: return@collect
+                    val myItem = queueState.items.find { it.id == currentJobId } ?: return@collect
+                    val isProcessing = myItem.status == QueueStatus.RUNNING || myItem.status == QueueStatus.QUEUED
+                    _uiState.update {
+                        it.copy(
+                            jobProgress = JobProgressState(
+                                jobId = currentJobId.mostSignificantBits,
+                                isProcessing = isProcessing,
+                                progress = myItem.progress,
+                                statusText = myItem.statusText,
+                                outputFilePath = myItem.galleryUri ?: "",
+                                errorMessage = myItem.error
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -495,39 +530,54 @@ class VisualizerViewModel(
             _uiState.update { it.copy(validationMessage = "Please select an audio source first.") }
             return
         }
-        val processor = visualizerProcessor
-        if (processor == null) {
-            _uiState.update { it.copy(validationMessage = "Render engine not ready.") }
+        val queue = exportQueueViewModel
+        if (queue == null) {
+            _uiState.update { it.copy(validationMessage = "Export queue not ready.") }
             return
         }
         if (state.jobProgress.isProcessing) return
 
         viewModelScope.launch {
             try {
-                processor.renderVisualizer(
-                    VisualizerRenderRequest(
-                        audioUri = audioUri,
-                        config = state.config,
-                        beatMarkersMs = state.beatSync.markersMs,
-                        // The builder skips its beat pulse unless an expression is
-                        // present; the pulse shape itself lives in the builder.
-                        beatEffectExpression = state.beatSync.selectedEffect.name.takeIf {
-                            state.beatSync.markersMs.isNotEmpty()
-                        },
-                        durationMs = state.beatSync.durationMs,
-                        outputName = state.outputName
+                val request = VisualizerRenderRequest(
+                    audioUri = audioUri,
+                    config = state.config,
+                    beatMarkersMs = state.beatSync.markersMs,
+                    beatEffectExpression = state.beatSync.selectedEffect.name.takeIf {
+                        state.beatSync.markersMs.isNotEmpty()
+                    },
+                    durationMs = state.beatSync.durationMs,
+                    outputName = state.outputName
+                )
+                val jobId = queue.enqueueProjectExport(
+                    BatchExportRequest(
+                        title = state.outputName.ifBlank { "Visualizer" },
+                        jobType = "VISUALIZER",
+                        visualizerConfigJson = RenderRequestSerializer.serializeVisualizer(request)
                     )
                 )
+                _uiState.update {
+                    it.copy(
+                        exportJobId = jobId,
+                        jobProgress = JobProgressState(
+                            jobId = jobId.mostSignificantBits,
+                            isProcessing = true,
+                            statusText = "Menunggu dalam antrean..."
+                        )
+                    )
+                }
             } catch (error: CancellationException) {
                 throw error
             } catch (_: Exception) {
-                // Failure is surfaced through visualizerProcessor.progressState.
+                // Failure is surfaced through queue item state.
             }
         }
     }
 
     fun cancelExport() {
-        visualizerProcessor?.cancel()
+        _uiState.value.exportJobId?.let { jobId ->
+            exportQueueViewModel?.cancelExportJob(jobId)
+        }
     }
 
     // --- Helpers ---

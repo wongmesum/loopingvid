@@ -324,6 +324,32 @@ private fun QueueItemRow(
                             )
                         }
                         Spacer(modifier = Modifier.width(6.dp))
+                    } else if (item.jobType == "VISUALIZER") {
+                        Surface(
+                            color = Color(0xFF9333EA).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "VISUALIZER",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF9333EA),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                    } else if (item.jobType == "SLIDESHOW") {
+                        Surface(
+                            color = Color(0xFF059669).copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "SLIDESHOW",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFF059669),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
                     }
 
                     Surface(

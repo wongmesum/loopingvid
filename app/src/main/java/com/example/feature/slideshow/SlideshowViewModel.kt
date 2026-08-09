@@ -5,11 +5,16 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.ffmpeg.JobProgressState
 import com.example.core.ffmpeg.SlideshowProcessor
 import com.example.core.ffmpeg.SlideshowRenderRequest
+import com.example.core.work.BatchExportRequest
+import com.example.core.work.ExportQueueViewModel
+import com.example.core.work.QueueStatus
+import com.example.core.work.RenderRequestSerializer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class SlideshowImage(
     val uri: String,
@@ -29,6 +34,8 @@ data class SlideshowUiState(
     val kenBurnsEnabled: Boolean = false,
     val overlayText: String = "",
     val jobProgress: JobProgressState = JobProgressState(),
+    /** Work id of the render this screen enqueued, used to track and cancel it. */
+    val exportJobId: UUID? = null,
     val validationMessage: String? = null
 ) {
     /** Real playback length after transition overlap is accounted for. */
@@ -45,16 +52,40 @@ data class SlideshowUiState(
 }
 
 class SlideshowViewModel(
-    private val slideshowProcessor: SlideshowProcessor
+    private val slideshowProcessor: SlideshowProcessor,
+    private val exportQueueViewModel: ExportQueueViewModel? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SlideshowUiState())
     val uiState: StateFlow<SlideshowUiState> = _uiState.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            slideshowProcessor.progressState.collect { progress ->
-                _uiState.value = _uiState.value.copy(jobProgress = progress)
+        // Fallback for tests and callers that do not inject the unified queue.
+        if (exportQueueViewModel == null) {
+            viewModelScope.launch {
+                slideshowProcessor.progressState.collect { progress ->
+                    _uiState.value = _uiState.value.copy(jobProgress = progress)
+                }
+            }
+        }
+
+        exportQueueViewModel?.let { queue ->
+            viewModelScope.launch {
+                queue.uiState.collect { queueState ->
+                    val currentJobId = _uiState.value.exportJobId ?: return@collect
+                    val item = queueState.items.find { it.id == currentJobId } ?: return@collect
+                    val isProcessing = item.status == QueueStatus.RUNNING || item.status == QueueStatus.QUEUED
+                    _uiState.value = _uiState.value.copy(
+                        jobProgress = JobProgressState(
+                            jobId = currentJobId.mostSignificantBits,
+                            isProcessing = isProcessing,
+                            progress = item.progress,
+                            statusText = item.statusText,
+                            outputFilePath = item.galleryUri ?: "",
+                            errorMessage = item.error
+                        )
+                    )
+                }
             }
         }
     }
@@ -128,22 +159,42 @@ class SlideshowViewModel(
         }
         if (state.jobProgress.isProcessing) return
 
+        val request = SlideshowRenderRequest(
+            imageUris = state.images.map { it.uri },
+            audioUri = state.audioUri,
+            perImageDurationSec = state.perImageDurationSec,
+            transition = state.transition,
+            transitionDurationSec = state.transitionDurationSec,
+            resolution = state.resolution,
+            aspectRatio = state.aspectRatio,
+            outputName = state.outputName,
+            kenBurnsEnabled = state.kenBurnsEnabled,
+            overlayText = state.overlayText
+        )
+
+        val queue = exportQueueViewModel
+        if (queue != null) {
+            val jobId = queue.enqueueProjectExport(
+                BatchExportRequest(
+                    title = state.outputName.ifBlank { "Slideshow" },
+                    jobType = "SLIDESHOW",
+                    slideshowConfigJson = RenderRequestSerializer.serializeSlideshow(request)
+                )
+            )
+            _uiState.value = _uiState.value.copy(
+                exportJobId = jobId,
+                jobProgress = JobProgressState(
+                    jobId = jobId.mostSignificantBits,
+                    isProcessing = true,
+                    statusText = "Menunggu dalam antrean..."
+                )
+            )
+            return
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                slideshowProcessor.renderSlideshow(
-                    SlideshowRenderRequest(
-                        imageUris = state.images.map { it.uri },
-                        audioUri = state.audioUri,
-                        perImageDurationSec = state.perImageDurationSec,
-                        transition = state.transition,
-                        transitionDurationSec = state.transitionDurationSec,
-                        resolution = state.resolution,
-                        aspectRatio = state.aspectRatio,
-                        outputName = state.outputName,
-                        kenBurnsEnabled = state.kenBurnsEnabled,
-                        overlayText = state.overlayText
-                    )
-                )
+                slideshowProcessor.renderSlideshow(request)
             } catch (error: Exception) {
                 // Failure is surfaced through slideshowProcessor.progressState.
             }
@@ -151,6 +202,11 @@ class SlideshowViewModel(
     }
 
     fun cancelRender() {
+        val jobId = _uiState.value.exportJobId
+        if (exportQueueViewModel != null && jobId != null) {
+            exportQueueViewModel.cancelExportJob(jobId)
+            return
+        }
         slideshowProcessor.cancel()
     }
 

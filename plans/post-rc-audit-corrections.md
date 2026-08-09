@@ -45,6 +45,13 @@
   - `ProjectManagerScreen.kt` dan `SnapshotHistoryDialog.kt` melayani UI interaksi: buat, restore, hapus snapshot.
   - Test: 2 migration tests, 8 repository tests — semua hijau.
   - Verifikasi: `compileDebugKotlin` ✅, `ProjectSnapshotRepositoryTest` ✅ (exit 0), `testDebugUnitTest` ✅ (1m 36s), `assembleDebug` ✅ (2m 7s).
-- Checkpoint 5: Selesaikan Unified Render Queue.
+- Checkpoint 5: Selesaikan Unified Render Queue. [SELESAI]
+  - `VideoExportWorker.kt` mengenali `VISUALIZER` dan `SLIDESHOW`, membaca config spesifiknya, dan koleksi progress dipindah ke processor yang benar.
+  - `ExportQueueViewModel.kt` disesuaikan untuk JSON config di dalam WorkManager `Data` dan status `BLOCKED` diubah mapping-nya ke `QUEUED` (bukan `CANCELLED`).
+  - `RenderRequestSerializer.kt` menggunakan `org.json` murni untuk round-trip objek yang punya variant `VisualizerBackground`.
+  - `SlideshowViewModel.kt` dan `VisualizerViewModel.kt` dialihkan ke model enqueue, progress dibaca dari state antrean.
+  - Test dependency `org.json:json:20240303` dipasang agar `RenderRequestSerializerTest` tidak bentrok dengan stub JVM framework Android.
+  - UI `ExportQueueCard.kt` menampilkan lencana badge job tipe baru.
+  - Verifikasi: `testDebugUnitTest` (RenderRequestSerializerTest) ✅ (exit 0), full `testDebugUnitTest` ✅ (1m 48s), `compileDebugKotlin` ✅, `assembleDebug` ✅ (8s).
 - Checkpoint 6: Verifikasi ARM64.
 - Checkpoint 7: Device Test dan Release Gate.

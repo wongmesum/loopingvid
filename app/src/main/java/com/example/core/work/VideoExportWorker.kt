@@ -8,6 +8,8 @@ import androidx.work.workDataOf
 import com.example.core.database.AppDatabase
 import com.example.core.database.LoopingVidRepository
 import com.example.core.ffmpeg.MediaProcessor
+import com.example.core.ffmpeg.SlideshowProcessor
+import com.example.core.ffmpeg.VisualizerProcessor
 import com.example.feature.project.ProjectLifecycleManager
 import kotlinx.coroutines.launch
 
@@ -46,6 +48,8 @@ class VideoExportWorker(
         const val KEY_AUTO_LEVELING_TARGET_LUFS = "KEY_AUTO_LEVELING_TARGET_LUFS"
         const val KEY_FADE_IN_SEC = "KEY_FADE_IN_SEC"
         const val KEY_FADE_OUT_SEC = "KEY_FADE_OUT_SEC"
+        const val KEY_VISUALIZER_CONFIG = "KEY_VISUALIZER_CONFIG"
+        const val KEY_SLIDESHOW_CONFIG = "KEY_SLIDESHOW_CONFIG"
 
         // WorkManager Data has no nullable Long slot, so absence is encoded as NO_PROJECT_ID.
         const val KEY_PROJECT_ID = "KEY_PROJECT_ID"
@@ -94,10 +98,26 @@ class VideoExportWorker(
         val mediaProcessor = MediaProcessor(context, repository)
         val projectLifecycleManager = ProjectLifecycleManager(repository)
 
+        // Visualizer/Slideshow renders publish progress on their own processor,
+        // so the collector has to follow whichever one this job actually uses.
+        val normalizedJobType = jobType.uppercase()
+        val visualizerProcessor = if (normalizedJobType == "VISUALIZER") {
+            VisualizerProcessor(context, repository)
+        } else null
+        val slideshowProcessor = if (normalizedJobType == "SLIDESHOW") {
+            SlideshowProcessor(context, repository)
+        } else null
+
+        val progressSource = when (normalizedJobType) {
+            "VISUALIZER" -> visualizerProcessor!!.progressState
+            "SLIDESHOW" -> slideshowProcessor!!.progressState
+            else -> mediaProcessor.progressState
+        }
+
         projectLifecycleManager.markRendering(projectId)
 
         val progressCollectorJob = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
-            mediaProcessor.progressState.collect { progressState ->
+            progressSource.collect { progressState ->
                 this@VideoExportWorker.setProgress(
                     workDataOf(
                         KEY_PROGRESS to progressState.progress,
@@ -112,7 +132,7 @@ class VideoExportWorker(
         }
 
         try {
-            val resultJobEntity = when (jobType.uppercase()) {
+            val resultJobEntity = when (normalizedJobType) {
                 "LOOP" -> {
                     mediaProcessor.executeLoopJob(
                         inputUri = inputUriStr,
@@ -145,6 +165,20 @@ class VideoExportWorker(
                         fadeInSec = inputData.getFloat(KEY_FADE_IN_SEC, 0f),
                         fadeOutSec = inputData.getFloat(KEY_FADE_OUT_SEC, 0f),
                         projectId = projectId
+                    )
+                }
+                "VISUALIZER" -> {
+                    val configJson = inputData.getString(KEY_VISUALIZER_CONFIG)
+                        ?: throw IllegalStateException("Missing visualizer config")
+                    visualizerProcessor!!.renderVisualizer(
+                        RenderRequestSerializer.deserializeVisualizer(configJson)
+                    )
+                }
+                "SLIDESHOW" -> {
+                    val configJson = inputData.getString(KEY_SLIDESHOW_CONFIG)
+                        ?: throw IllegalStateException("Missing slideshow config")
+                    slideshowProcessor!!.renderSlideshow(
+                        RenderRequestSerializer.deserializeSlideshow(configJson)
                     )
                 }
                 else -> { // "EDITOR" or others

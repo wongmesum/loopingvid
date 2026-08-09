@@ -75,7 +75,9 @@ data class BatchExportRequest(
     val autoLevelingTargetLufs: Float = -14.0f,
     val fadeInSec: Float = 0f,
     val fadeOutSec: Float = 0f,
-    val projectId: Long? = null
+    val projectId: Long? = null,
+    val visualizerConfigJson: String? = null,
+    val slideshowConfigJson: String? = null
 )
 
 class ExportQueueViewModel(
@@ -119,11 +121,11 @@ class ExportQueueViewModel(
                             ?: "Movies"
 
                         val status = when (info.state) {
-                            WorkInfo.State.ENQUEUED -> QueueStatus.QUEUED
+                            WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> QueueStatus.QUEUED
                             WorkInfo.State.RUNNING -> QueueStatus.RUNNING
                             WorkInfo.State.SUCCEEDED -> QueueStatus.SUCCEEDED
                             WorkInfo.State.FAILED -> QueueStatus.FAILED
-                            WorkInfo.State.CANCELLED, WorkInfo.State.BLOCKED -> QueueStatus.CANCELLED
+                            WorkInfo.State.CANCELLED -> QueueStatus.CANCELLED
                         }
 
                         val progress = when (info.state) {
@@ -173,8 +175,9 @@ class ExportQueueViewModel(
 
     /**
      * Enqueues a single edited video project export into the sequential WorkManager queue.
+     * Returns the UUID of the enqueued job so callers can track or cancel it.
      */
-    fun enqueueProjectExport(request: BatchExportRequest) {
+    fun enqueueProjectExport(request: BatchExportRequest): UUID {
         val inputData = buildDataFromRequest(request)
 
         val workRequest = OneTimeWorkRequestBuilder<VideoExportWorker>()
@@ -187,6 +190,8 @@ class ExportQueueViewModel(
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             workRequest
         ).enqueue()
+
+        return workRequest.id
     }
 
     /**
@@ -245,7 +250,9 @@ class ExportQueueViewModel(
             VideoExportWorker.KEY_AUTO_LEVELING_TARGET_LUFS to request.autoLevelingTargetLufs,
             VideoExportWorker.KEY_FADE_IN_SEC to request.fadeInSec,
             VideoExportWorker.KEY_FADE_OUT_SEC to request.fadeOutSec,
-            VideoExportWorker.KEY_PROJECT_ID to (request.projectId ?: VideoExportWorker.NO_PROJECT_ID)
+            VideoExportWorker.KEY_PROJECT_ID to (request.projectId ?: VideoExportWorker.NO_PROJECT_ID),
+            VideoExportWorker.KEY_VISUALIZER_CONFIG to request.visualizerConfigJson,
+            VideoExportWorker.KEY_SLIDESHOW_CONFIG to request.slideshowConfigJson
         )
     }
 
