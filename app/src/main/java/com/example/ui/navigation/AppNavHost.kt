@@ -18,6 +18,8 @@ import com.example.core.work.ExportQueueViewModel
 import com.example.feature.about.AboutScreen
 import com.example.feature.about.PrivacyPolicyScreen
 import com.example.feature.about.SupportProjectScreen
+import com.example.feature.assets.AssetLibraryScreen
+import com.example.feature.assets.AssetManagerViewModel
 import com.example.feature.editor.EditorScreen
 import com.example.feature.editor.EditorViewModel
 import com.example.feature.diagnostics.DeviceDiagnosticsScreen
@@ -56,6 +58,7 @@ fun AppNavHost(
     exportViewModel: ExportViewModel,
     exportQueueViewModel: ExportQueueViewModel?,
     audioAnalysisRepository: AudioAnalysisRepository? = null,
+    assetManagerViewModel: AssetManagerViewModel? = null,
     passedLiveSourceUri: String?,
     onNavigateToGoLive: (String) -> Unit,
     onStartOnboarding: () -> Unit,
@@ -113,10 +116,10 @@ fun AppNavHost(
 
         // --- Studio Tools ---
         composable(NavDestination.Loop.route) {
-            LoopScreen(exportViewModel = exportViewModel, viewModel = loopViewModel, onNavigateToGoLive = onNavigateToGoLive)
+            LoopScreen(exportViewModel = exportViewModel, viewModel = loopViewModel, onNavigateToGoLive = onNavigateToGoLive, assetManagerViewModel = assetManagerViewModel)
         }
         composable(NavDestination.Mastering.route) {
-            MasteringScreen(exportViewModel = exportViewModel, viewModel = masteringViewModel, onNavigateToGoLive = onNavigateToGoLive)
+            MasteringScreen(exportViewModel = exportViewModel, viewModel = masteringViewModel, onNavigateToGoLive = onNavigateToGoLive, assetManagerViewModel = assetManagerViewModel)
         }
         composable(NavDestination.Editor.route) {
             EditorScreen(
@@ -124,7 +127,8 @@ fun AppNavHost(
                 viewModel = editorViewModel,
                 exportQueueViewModel = exportQueueViewModel,
                 audioAnalysisRepository = audioAnalysisRepository,
-                onNavigateToGoLive = onNavigateToGoLive
+                onNavigateToGoLive = onNavigateToGoLive,
+                assetManagerViewModel = assetManagerViewModel
             )
         }
         composable(NavDestination.Slideshow.route) {
@@ -167,6 +171,9 @@ fun AppNavHost(
         }
         composable(NavDestination.DeviceDiagnostics.route) {
             DeviceDiagnosticsScreen(onNavigateBack = { navController.popBackStack() })
+        }
+        composable(NavDestination.AssetLibrary.route) {
+            assetManagerViewModel?.let { vm -> AssetLibraryScreen(viewModel = vm) }
         }
     }
 }

@@ -6,8 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [RenderJobEntity::class, LiveSessionEntity::class, AppSettingEntity::class, JobHistoryEntity::class, EditorAutoSaveEntity::class, ProjectEntity::class],
-    version = 4,
+    entities = [RenderJobEntity::class, LiveSessionEntity::class, AppSettingEntity::class, JobHistoryEntity::class, EditorAutoSaveEntity::class, ProjectEntity::class, AssetEntity::class],
+    version = 5,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -17,6 +17,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun jobHistoryDao(): JobHistoryDao
     abstract fun editorAutoSaveDao(): EditorAutoSaveDao
     abstract fun projectDao(): ProjectDao
+    abstract fun assetDao(): AssetDao
 
     companion object {
         @Volatile
@@ -29,7 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "loopingvid_db"
                 )
-                    .addMigrations(MIGRATION_3_4)
+                    .addMigrations(MIGRATION_3_4, MIGRATION_4_5)
                     // Schemas 1 and 2 shipped before exportSchema was enabled, so
                     // there is no record to migrate them from. Those installs are
                     // still rebuilt from scratch. Every version from 3 onward must

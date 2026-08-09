@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Loop
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Settings
@@ -60,6 +61,7 @@ sealed class NavDestination(
     object Privacy : NavDestination("privacy", "Kebijakan Privasi", Icons.Rounded.PrivacyTip, "menu_privasi")
     object SupportProject : NavDestination("support", "Dukungan", Icons.Rounded.Favorite, "menu_dukungan")
     object DeviceDiagnostics : NavDestination("device_diagnostics", "Diagnostik Perangkat", Icons.Rounded.MonitorHeart, "menu_diagnostics")
+    object AssetLibrary : NavDestination("asset_library", "Pustaka Media", Icons.Rounded.PhotoLibrary, "menu_pustaka_media")
 
     companion object {
         val bottomNavItems: List<NavDestination>
@@ -83,7 +85,8 @@ sealed class NavDestination(
                 About.route,
                 Privacy.route,
                 SupportProject.route,
-                DeviceDiagnostics.route
+                DeviceDiagnostics.route,
+                AssetLibrary.route
             )
     }
 }

@@ -64,6 +64,7 @@ fun MainScreen(
     exportViewModel: ExportViewModel,
     exportQueueViewModel: ExportQueueViewModel? = null,
     audioAnalysisRepository: com.example.core.audio.AudioAnalysisRepository? = null,
+    assetManagerViewModel: com.example.feature.assets.AssetManagerViewModel? = null,
     navController: NavHostController = rememberNavController()
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -172,6 +173,12 @@ fun MainScreen(
                                     leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
                                     modifier = Modifier.testTag("menu_item_dukungan")
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("Pustaka Media") },
+                                    onClick = { showMenu = false; navController.navigate(NavDestination.AssetLibrary.route) },
+                                    leadingIcon = { Icon(NavDestination.AssetLibrary.icon, contentDescription = null) },
+                                    modifier = Modifier.testTag("menu_item_pustaka_media")
+                                )
                             }
                         }
                     )
@@ -247,6 +254,7 @@ fun MainScreen(
                     exportViewModel = exportViewModel,
                     exportQueueViewModel = exportQueueViewModel,
                     audioAnalysisRepository = audioAnalysisRepository,
+                    assetManagerViewModel = assetManagerViewModel,
                     passedLiveSourceUri = passedLiveSourceUri,
                     onNavigateToGoLive = ::navigateToGoLive,
                     onStartOnboarding = ::startOnboardingTour,

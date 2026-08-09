@@ -87,7 +87,8 @@ import com.example.core.ui.PrecisionVideoTrimControl
 fun LoopScreen(
     exportViewModel: com.example.core.ui.ExportViewModel,
     viewModel: LoopViewModel,
-    onNavigateToGoLive: (sourceUri: String) -> Unit
+    onNavigateToGoLive: (sourceUri: String) -> Unit,
+    assetManagerViewModel: com.example.feature.assets.AssetManagerViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val undoRedoState by viewModel.undoRedoState.collectAsState()
@@ -98,10 +99,13 @@ fun LoopScreen(
         mutableStateOf(uiState.targetDurationSec.toInt().toString())
     }
 
+    val recordAsset = com.example.feature.assets.rememberAssetRecorder(assetManagerViewModel)
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
+            recordAsset(it)
             viewModel.onMediaSelected(it.toString(), it.lastPathSegment ?: "selected_media.mp4")
         }
     }

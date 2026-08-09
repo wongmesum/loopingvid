@@ -79,4 +79,9 @@ data class SelectedMediaFile(
             // Fallback for other platform variances
         }
     }
+
+    fun hasPersistedReadPermission(context: Context): Boolean =
+        context.contentResolver.persistedUriPermissions.any { permission ->
+            permission.uri == uri && permission.isReadPermission
+        }
 }

@@ -107,7 +107,8 @@ enum class MasteringToolCategory(val title: String, val icon: ImageVector, val d
 fun MasteringScreen(
     exportViewModel: com.example.core.ui.ExportViewModel,
     viewModel: MasteringViewModel,
-    onNavigateToGoLive: (sourceUri: String) -> Unit
+    onNavigateToGoLive: (sourceUri: String) -> Unit,
+    assetManagerViewModel: com.example.feature.assets.AssetManagerViewModel? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val undoRedoState by viewModel.undoRedoState.collectAsState()
@@ -116,10 +117,13 @@ fun MasteringScreen(
     var activeCategory by remember { mutableStateOf(MasteringToolCategory.AUDIO_INPUT) }
     var isDropdownMenuExpanded by remember { mutableStateOf(false) }
 
+    val recordAsset = com.example.feature.assets.rememberAssetRecorder(assetManagerViewModel)
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
+            recordAsset(it)
             viewModel.onAudioSelected(it.toString(), it.lastPathSegment ?: "audio_track.mp3")
         }
     }

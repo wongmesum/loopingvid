@@ -111,7 +111,8 @@ fun EditorScreen(
     viewModel: EditorViewModel,
     exportQueueViewModel: ExportQueueViewModel? = null,
     audioAnalysisRepository: com.example.core.audio.AudioAnalysisRepository? = null,
-    onNavigateToGoLive: (sourceUri: String) -> Unit
+    onNavigateToGoLive: (sourceUri: String) -> Unit,
+    assetManagerViewModel: com.example.feature.assets.AssetManagerViewModel? = null
 ) {
     var isLoading by remember { mutableStateOf(true) }
     
@@ -167,22 +168,33 @@ fun EditorScreen(
         isAutoSavePanelExpanded = expand
     }
 
+    val recordAsset = com.example.feature.assets.rememberAssetRecorder(assetManagerViewModel)
+
     val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onMediaSelected(it.toString(), it.lastPathSegment ?: "video.mp4") }
+        uri?.let {
+            recordAsset(it)
+            viewModel.onMediaSelected(it.toString(), it.lastPathSegment ?: "video.mp4")
+        }
     }
 
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onAudioSelected(it.toString(), it.lastPathSegment ?: "audio.mp3") }
+        uri?.let {
+            recordAsset(it)
+            viewModel.onAudioSelected(it.toString(), it.lastPathSegment ?: "audio.mp3")
+        }
     }
 
     val overlayPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let { viewModel.onOverlaySelected(it.toString(), it.lastPathSegment ?: "overlay.mp4") }
+        uri?.let {
+            recordAsset(it)
+            viewModel.onOverlaySelected(it.toString(), it.lastPathSegment ?: "overlay.mp4")
+        }
     }
 
     Column(

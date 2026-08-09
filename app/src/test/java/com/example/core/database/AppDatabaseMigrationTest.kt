@@ -15,7 +15,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Guards the v3 -> v4 upgrade path against data loss.
+ * Guards the v3 -> v4 -> v5 upgrade path against data loss.
  *
  * This drives [MIGRATION_3_4] against a real SQLite database seeded with the v3
  * schema instead of going through Room's MigrationTestHelper: the helper
@@ -134,6 +134,43 @@ class AppDatabaseMigrationTest {
             assertEquals("My Loop", cursor.getString(cursor.getColumnIndexOrThrow("name")))
             assertEquals("loop", cursor.getString(cursor.getColumnIndexOrThrow("type")))
             assertEquals("draft", cursor.getString(cursor.getColumnIndexOrThrow("status")))
+        }
+    }
+
+    @Test
+    fun `migration 4 to 5 creates an empty assets table`() {
+        val db = openHelper.writableDatabase
+
+        MIGRATION_3_4.migrate(db)
+        MIGRATION_4_5.migrate(db)
+
+        db.query("SELECT COUNT(*) FROM assets").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+    }
+
+    @Test
+    fun `assets table accepts a row with the columns the entity declares`() {
+        val db = openHelper.writableDatabase
+
+        MIGRATION_3_4.migrate(db)
+        MIGRATION_4_5.migrate(db)
+
+        db.execSQL(
+            """
+            INSERT INTO assets
+                (uriString, fileName, fileSize, mimeType, mediaType, isFavorite, isPinned, usageCount, lastAccessedAt, createdAt, permissionPersisted, isMissing)
+            VALUES
+                ('content://media/1', 'vid.mp4', 1024, 'video/mp4', 'VIDEO', 0, 1, 5, 200, 100, 1, 0)
+            """.trimIndent()
+        )
+
+        db.query("SELECT uriString, fileName, isPinned FROM assets").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("content://media/1", cursor.getString(cursor.getColumnIndexOrThrow("uriString")))
+            assertEquals("vid.mp4", cursor.getString(cursor.getColumnIndexOrThrow("fileName")))
+            assertEquals(1, cursor.getInt(cursor.getColumnIndexOrThrow("isPinned")))
         }
     }
 }

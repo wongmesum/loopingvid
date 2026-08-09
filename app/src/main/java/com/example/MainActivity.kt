@@ -7,10 +7,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.core.audio.AudioAnalysisRepository
 import com.example.core.database.AppDatabase
+import com.example.core.database.AssetRepository
 import com.example.core.database.FirestoreJobHistorySyncManager
 import com.example.core.database.LoopingVidRepository
 import com.example.core.ffmpeg.MediaProcessor
 import com.example.core.ffmpeg.VisualizerProcessor
+import com.example.feature.assets.AssetManagerViewModel
 import com.example.feature.editor.EditorViewModel
 import com.example.feature.history.HistoryViewModel
 import com.example.feature.live.LiveViewModel
@@ -62,6 +64,7 @@ class MainActivity : ComponentActivity() {
 
         val mediaProcessor = MediaProcessor(applicationContext, repository)
         val audioAnalysisRepository = AudioAnalysisRepository(applicationContext)
+        val assetRepository = AssetRepository(db.assetDao())
 
         val loopViewModel = LoopViewModel(mediaProcessor)
         val masteringViewModel = MasteringViewModel(mediaProcessor, applicationContext, audioAnalysisRepository)
@@ -74,6 +77,7 @@ class MainActivity : ComponentActivity() {
         val slideshowViewModel = SlideshowViewModel(slideshowProcessor)
         val visualizerProcessor = VisualizerProcessor(applicationContext, repository)
         val visualizerViewModel = VisualizerViewModel(applicationContext, visualizerProcessor, audioAnalysisRepository)
+        val assetManagerViewModel = AssetManagerViewModel(assetRepository)
         val exportViewModel = com.example.core.ui.ExportViewModel(mediaProcessor)
         val exportQueueViewModel = com.example.core.work.ExportQueueViewModel(application)
 
@@ -91,7 +95,8 @@ class MainActivity : ComponentActivity() {
                     visualizerViewModel = visualizerViewModel,
                     exportViewModel = exportViewModel,
                     exportQueueViewModel = exportQueueViewModel,
-                    audioAnalysisRepository = audioAnalysisRepository
+                    audioAnalysisRepository = audioAnalysisRepository,
+                    assetManagerViewModel = assetManagerViewModel
                 )
             }
         }

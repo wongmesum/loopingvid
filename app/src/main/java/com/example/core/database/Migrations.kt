@@ -29,3 +29,34 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("ALTER TABLE `render_jobs` ADD COLUMN `projectId` INTEGER")
     }
 }
+
+/**
+ * Non-destructive migration from schema v4 to v5.
+ * Adds the `assets` table for caching user-selected media metadata.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `assets` (
+                `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                `uriString` TEXT NOT NULL,
+                `fileName` TEXT NOT NULL,
+                `fileSize` INTEGER NOT NULL,
+                `mimeType` TEXT NOT NULL,
+                `mediaType` TEXT NOT NULL,
+                `isFavorite` INTEGER NOT NULL,
+                `isPinned` INTEGER NOT NULL,
+                `usageCount` INTEGER NOT NULL,
+                `lastAccessedAt` INTEGER NOT NULL,
+                `createdAt` INTEGER NOT NULL,
+                `permissionPersisted` INTEGER NOT NULL,
+                `isMissing` INTEGER NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_assets_uriString` ON `assets` (`uriString`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_assets_lastAccessedAt` ON `assets` (`lastAccessedAt`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_assets_isFavorite` ON `assets` (`isFavorite`)")
+    }
+}

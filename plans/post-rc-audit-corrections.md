@@ -1,7 +1,7 @@
 # Post-RC Audit Corrections
 
 ## Status Jujur
-- **Asset Manager:** belum selesai.
+- **Asset Manager:** selesai lokal (Room asset cache, UI pustaka, picker recording), belum device test.
 - **Project Snapshot:** belum selesai.
 - **Unified Render Engine:** sebagian.
 - **Audio Analysis:** sumber data nyata sudah terpasang (mastering + trimmer), belum device test.
@@ -25,7 +25,19 @@
   - Verifikasi: `:app:compileDebugKotlin` exit 0, `:app:testDebugUnitTest` exit 0, `:app:assembleDebug` exit 0 (`app-debug.apk` terbentuk).
 
 ## Checkpoints Tertunda
-- Checkpoint 3: Bangun Media Asset Manager.
+- Checkpoint 3: Bangun Media Asset Manager. [SELESAI]
+  - `core/database/AssetEntity.kt` + `AssetDao.kt`: Room entity & DAO, unique URI, usage count, favorites/pin.
+  - `core/database/Migrations.kt`: `MIGRATION_4_5` — CREATE TABLE + 3 indexes, verified against Room schema v5 JSON.
+  - `core/database/AppDatabase.kt`: bumped v5, registered entity + DAO + migration.
+  - `core/database/AssetRepository.kt`: upsert by URI, toggle favorite/pin, mark missing, delete.
+  - `feature/assets/AssetManagerViewModel.kt`: collects recent/favorite flows, exposes UI actions.
+  - `feature/assets/AssetLibraryScreen.kt`: tabs Terbaru/Favorit, session badge, action icons.
+  - `feature/assets/AssetRecorder.kt`: picker-site helper — resolves metadata, verifies persisted permission.
+  - `core/ui/SelectedMediaFile.kt`: added `hasPersistedReadPermission(context)`.
+  - Navigation: `NavDestination.AssetLibrary`, overflow menu item, `AppNavHost` route.
+  - Picker integration: Loop, Editor (video/audio/overlay), Mastering all record picks.
+  - Tests: 2 migration tests, 7 repository tests, 3 ViewModel tests — all green.
+  - Verification: compileDebugKotlin ✓, testDebugUnitTest ✓, assembleDebug ✓ (APK 53MB).
 - Checkpoint 4: Project Snapshot dan Recovery.
 - Checkpoint 5: Selesaikan Unified Render Queue.
 - Checkpoint 6: Verifikasi ARM64.
