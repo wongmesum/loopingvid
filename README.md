@@ -130,4 +130,4 @@ app/src/main/java/com/example/
 - Database menggunakan migrasi eksplisit dari v3 ke atas. Versi 1-2 masih memakai destructive fallback.
 - Schema JSON Room (`app/schemas/`) di-export oleh KSP saat build.
 - Debug keystore di-generate oleh CI; tidak disimpan di repository.
-- ABI native saat ini: `armeabi-v7a`, `x86`. Penambahan `arm64-v8a` menunggu verifikasi library FFmpeg.
+- ABI native: `arm64-v8a` saja. Engine FFmpegKit 8.1.7 (maintained) sudah dikemas dan terverifikasi di APK. Runtime proof tertunda sampai device/emulator ARM64 tersedia.

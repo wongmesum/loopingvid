@@ -49,8 +49,13 @@ rather than adding new surface area.
   ProGuard rules were drafted for Room, Moshi, Retrofit/OkHttp, Firebase, and
   FFmpegKit, but enabling R8 needs an on-device runtime pass before it ships,
   since misconfigured keep rules typically fail at runtime, not compile time.
-- `abiFilters` targets `armeabi-v7a` and `x86` only. There is no `arm64-v8a`
-  output, which Google Play requires.
+- `abiFilters` now targets `arm64-v8a` only, and the debug APK was verified to
+  carry the FFmpegKit native objects for that ABI. The engine itself has not yet
+  been executed on an `arm64-v8a` device: the build host has no emulator, system
+  image, or connected device, so the instrumented smoke test
+  (`FFmpegNativeSmokeTest`) is committed but has never been run. The runtime
+  encoder set is therefore still unknown, and the H.264 encoder named in the
+  FFmpeg command builders has not been confirmed present in the shipped binary.
 - Coverage is low. Much of the logic lives inside composables, which the unit
   test suite cannot reach without an emulator.
 - Screen rendering is verified by unit tests and static analysis only. No

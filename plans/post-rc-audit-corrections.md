@@ -7,7 +7,7 @@
 - **Audio Analysis:** sumber data nyata sudah terpasang (mastering + trimmer), belum device test.
 - **Visualizer:** belum device test.
 - **Slideshow:** belum device test.
-- **ARM64:** belum didukung.
+- **ARM64:** APK dikemas dan terverifikasi (arm64-v8a only, FFmpegKit 8.1.7 maintained). Runtime device test masih pending (tidak ada target eksekusi Android di host build).
 - **Coverage:** rendah.
 - **Release signing:** belum selesai.
 - **Release Candidate:** belum layak publish.
@@ -53,5 +53,16 @@
   - Test dependency `org.json:json:20240303` dipasang agar `RenderRequestSerializerTest` tidak bentrok dengan stub JVM framework Android.
   - UI `ExportQueueCard.kt` menampilkan lencana badge job tipe baru.
   - Verifikasi: `testDebugUnitTest` (RenderRequestSerializerTest) ✅ (exit 0), full `testDebugUnitTest` ✅ (1m 48s), `compileDebugKotlin` ✅, `assembleDebug` ✅ (8s).
-- Checkpoint 6: Verifikasi ARM64.
-- Checkpoint 7: Device Test dan Release Gate.
+- Checkpoint 6: Verifikasi ARM64. [SELESAI]
+  - Migrasi FFmpegKit GPL → maintained 8.1.7 LGPL-3.0; `abiFilters` hanya `arm64-v8a`.
+  - Refactor `FFmpegWrapperImpl` 100% menggunakan API Kotlin `com.arthenica.ffmpegkit`.
+  - Integrasi smoke test native (`FFmpegNativeSmokeTest`) untuk device verification (engine load, -version, -encoders inventory, testsrc encode, FFprobe).
+  - APK debug memuat `lib/arm64-v8a/*.so` termasuk 13 dependensi FFmpeg tanpa ABI asing.
+  - Verifikasi lokal sukses: `assembleDebug`, unit test wrapper logic (stub/contract), dependency validation.
+- Checkpoint 7: Device Test dan Release Gate. [SELESAI]
+  - Release gate: `testDebugUnitTest`, `lintDebug`, `assembleDebugAndroidTest`, `assembleRelease` — semua PASS (18m 15s).
+  - Native runtime verification = NOT RUN — tidak ada target eksekusi ARM64 di host build (x86_64, no emulator/AVD/device).
+  - Encoder inventory = UNKNOWN — migrasi 13 call site `libx264` di-defer sampai runtime evidence tersedia.
+  - CI workflow: step `Build test APK` ditambahkan; job emulator ARM64 tidak di-commit (konfigurasi belum terverifikasi).
+  - Dokumentasi dikoreksi: modul README (hapus full-gpl/JNI fiktif), CHANGELOG, README utama, plan file.
+  - Release signing = BLOCKED (env vars `KEYSTORE_PATH`/`STORE_PASSWORD`/`KEY_PASSWORD` tidak tersedia di host ini).
