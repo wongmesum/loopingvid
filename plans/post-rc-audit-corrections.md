@@ -70,4 +70,8 @@
   - Keep rules ditambah untuk model yang dipakai `KotlinJsonAdapterFactory` (refleksi): `AudioAnalysisResult`, `WaveformData`, `SpectrumData`, `BpmData`, `LoudnessData`, `ExportPreset`, `PresetCategory`. Rule lama hanya menutup `**.entity.**`/`**.model.**`, jadi cache audio analysis dan custom preset akan pecah saat runtime tanpa tambahan ini.
   - Model Gemini di `GeminiCaptionGenerator.kt` sengaja TIDAK diberi keep rule: semuanya `@JsonClass(generateAdapter = true)` (codegen, bukan refleksi).
   - Verifikasi R8: `testDebugUnitTest` + `lintDebug` + `assembleRelease` + `bundleRelease` PASS (34m 2s). APK unsigned = 39.706.841 bytes (~37,9 MiB), di bawah target 50MB.
+  - Bukti artifact release: APK `app-release-unsigned.apk` = 39.706.841 bytes (37,87 MiB), SHA-256 `037bce8b9f0d8ae935df871a98f4a23335535a2a3b4f6b6bea63181230371a2c`.
+  - APK native payload: 14 file `.so`, ABI tepat `arm64-v8a`, signature files `META-INF/` kosong.
+  - Bukti bundle release: AAB `app-release.aab` = 31.622.913 bytes (30,16 MiB), SHA-256 `9a57af6841415e130ccd2fcc897525afacf3336eeb3bcff94de13ecc243d61a4`.
+  - AAB native payload: 14 file `.so` di `base/lib/arm64-v8a/`, ABI tepat `arm64-v8a`, signature files `META-INF/` kosong.
   - Catatan batas bukti: build hijau hanya membuktikan R8 tidak memutus kompilasi. Kebenaran keep rule di jalur refleksi baru terbukti saat runtime, dan runtime ARM64 masih NOT RUN.

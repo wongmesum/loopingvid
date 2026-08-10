@@ -50,8 +50,11 @@ rather than adding new surface area.
   release APK builds at 39,706,841 bytes (~37.9 MiB), below the 50MB target. An
   ARM64 device/emulator runtime pass is still required before signed release,
   since misconfigured keep rules typically fail at runtime, not compile time.
-- `abiFilters` now targets `arm64-v8a` only, and the debug APK was verified to
-  carry the FFmpegKit native objects for that ABI. The engine itself has not yet
+- `abiFilters` now targets `arm64-v8a` only. Both release artifacts were
+  inspected and carry 14 native objects under that single ABI: the unsigned APK
+  (39,706,841 bytes) and the app bundle (31,622,913 bytes, under
+  `base/lib/arm64-v8a/`). Neither contains `META-INF/` signature files, as
+  expected for unsigned output. The engine itself has not yet
   been executed on an `arm64-v8a` device: the build host has no emulator, system
   image, or connected device, so the instrumented smoke test
   (`FFmpegNativeSmokeTest`) is committed but has never been run. The runtime
