@@ -1,0 +1,176 @@
+# Pending Work — Checkpoint 6 (ARM64 Support)
+
+Status: BLOCKED BY EXECUTION ENVIRONMENT
+Last update: 2026-08-09
+
+## Latest execution probes
+
+All required Gradle commands remain unrunnable. Exact commands attempted:
+- `cd D:/loopingvid && ./gradlew.bat :app:dependencies --configuration debugRuntimeClasspath --console=plain`
+- `cd D:/loopingvid && ./gradlew.bat :app:dependencyInsight --configuration debugRuntimeClasspath --dependency ffmpeg-kit-full --console=plain`
+
+Each was blocked before Gradle started with:
+`cx/gpt-5.5-review is temporarily unavailable, so auto mode cannot determine the safety of Bash right now.`
+
+## Additional Notes (2026-08-09):
+
+- Evaluated imports inside `FFmpegWrapperImpl.kt`:
+  - `com.github.hiteshsondhi88.libffmpeg.FFmpeg`
+  - `LoadBinaryResponseHandler`
+  - `ExecuteBinaryResponseHandler`
+  - `FFmpegCommandAlreadyRunningException`
+  - `FFmpegNotSupportedException`
+  These old library APIs MUST be replaced with `FFmpegKit.executeAsync` and `ReturnCode` in the eventual rewrite.
+
+- Evaluated Test Impacts (`app/src/test/java/com/example/core/ffmpeg/MediaProcessorTest.kt`):
+  Test class heavily uses `mockkConstructor(FFmpegWrapperImpl::class)`. Changing `FFmpegWrapperImpl` to initialize `FFmpegKit` directly may disrupt these tests if they depend on specific internal behavior. However, they mock the *interface* methods (`getVersion()`, `execute()`), which we will keep unchanged.
+
+- Execution Classifier remains blocked. Gradle tasks (`dependencies`, `dependencyInsight`) cannot execute. Checkpoint 6 remains ON HOLD. DO NOT COMMIT.
+
+## Audit Fase A: Inventaris encoder/codec produksi (lengkap, dari source)
+
+| File | Function | Encoder/codec | Alasan dipakai | Input | Output | Required feature | Possible replacement |
+|---|---|---|---|---|---|---|---|
+| FFmpegWrapper.kt:67 | buildPreciseTrimCommand | libx264 + aac | re-encode presisi (bukan copy) supaya cut akurat di non-keyframe | video | mp4 | H.264 encode + CRF | openh264 / mpeg4 / h264_mediacodec |
+| FFmpegWrapper.kt:125 | buildNormalLoopCommand | libx264 + aac | -stream_loop butuh re-encode | video | mp4 | H.264 encode + bitrate cap | sama |
+| FFmpegWrapper.kt:175 | buildCrossfadeLoopCommand | libx264 + aac | xfade filtergraph memaksa re-encode | video | mp4 | H.264 encode + filter_complex | sama |
+| FFmpegWrapper.kt:371 | buildTrimmedVideoAudioMasteringCommand | libx264 | trim+scale+audio master satu pass | video | mp4 | H.264 encode | sama |
+| FFmpegWrapper.kt:481 | buildSlideshowCommand | libx264 + aac | render dari image sequence | images+audio | mp4 | H.264 encode + yuv420p | sama |
+| MediaProcessor.kt:702 | render overlay/spectrum | libx264 | overlay + spectrum render | video | mp4 | H.264 encode + bitrate cap | sama |
+| VisualizerExportCommandBuilder.kt:51 | build | libx264 + aac | render visualizer dari filtergraph | audio(+image) | mp4 | H.264 encode + yuv420p | sama |
+| FFmpegWrapper.kt:255 | buildMasteringCommand | libmp3lame / pcm_s16le | export audio mp3/wav | audio | mp3/wav | LAME (LGPL) / PCM | tetap, `full` LGPL sudah bawa lame |
+| FFmpegWrapper.kt:286 | buildLoudnormSecondPassCommand | copy + aac | video stream tidak di-re-encode | video | mp4 | stream copy | tetap |
+| GeminiCaptionGenerator.kt:112 | generateCaptionsForVideo | libmp3lame | ekstrak audio untuk transkripsi | video | mp3 | LAME | tetap |
+
+Filter yang wajib ada: xfade, loudnorm, afftdn, dynaudnorm, highpass, afade, crop, scale,
+drawtext, overlay, concat, zoompan, showfreqs, showwaves, showcqt.
+
+KESIMPULAN FASE A: `libx264` BUKAN requirement fungsional. Requirement nyatanya adalah
+"encode H.264/MP4 playable dengan yuv420p, mendukung filter_complex, CRF atau bitrate cap".
+`libx264` adalah pilihan implementasi historis, bukan kebutuhan fitur. TETAPI penggantinya
+belum boleh dipilih: encoder H.264 mana yang benar-benar ada di dalam artifact LGPL masih
+UNVERIFIED (README kandidat hanya bilang `openh264` "where enabled" — kata-kata ini tidak
+cukup sebagai bukti). Butuh `-encoders` runtime inventory.
+
+CATATAN: `libmp3lame` dan `pcm_s16le` aman di build LGPL (lame LGPL, PCM built-in), jadi
+jalur mastering audio tidak terpengaruh keputusan GPL/non-GPL.
+
+## Temuan keamanan (pre-existing, di luar scope perubahan Checkpoint 6)
+
+`GeminiCaptionGenerator.kt:112` membangun command sebagai raw string dengan interpolasi
+`$videoUri` dan `${tempAudioFile.absolutePath}`, lalu memanggil `execute(String)` yang
+di-@Deprecated dan memecah argumen dengan split spasi. Path berisi spasi akan pecah, dan
+pola ini melanggar aturan argv-list di LANGKAH 7. Satu-satunya call site raw-string yang
+tersisa. Perlu dimigrasi ke `execute(List<String>)` — dicatat, TIDAK diubah sekarang karena
+bukan bagian dari scope engine/ABI Checkpoint 6.
+
+## Audit Fase A (lama): Kebutuhan Nyata libx264
+Source project menunjukkan `libx264` HARDCODED di command builder:
+- `FFmpegWrapper.kt` (4 tempat)
+- `MediaProcessor.kt` (2 tempat, `buildPreciseTrimCommand`, hardcoded render)
+- `VisualizerExportCommandBuilder.kt` (1 tempat, `build`)
+Output video wajib `yuv420p` dan playable (Media3 ExoPlayer). Tidak ada hardware encoder fallback (`h264_mediacodec`) atau encoder Android bawaan di command saat ini. Jika encoder GPL (`libx264`) diganti, maka perlu refactor ke `mpeg4` (low quality) atau eksperimen encoder FFmpeg bawaan (`libopenh264` jika ada di build LGPL, tapi FFmpegKit dokumentasinya menyatakan `openh264` ada bila di-enable).
+
+## Audit Fase B: ABI Policy Project
+- **Current ABI policy**: `app/build.gradle.kts` menetapkan `abiFilters += listOf("armeabi-v7a", "x86")`
+- **Actual packaged ABI**: Sesuai legacy dependencies, belum ada ARM64.
+- **Explicit requirement**: Project documentation `docs/RELEASE.md` eksplisit menyatakan "Pastikan device mendukung arm64-v8a (semua HP 2018+)". Dan `CHANGELOG.md` mencatat sebagai "Known Limitation" bahwa ARM64 *belum* ada karena diblokir engine. Jadi, `arm64-v8a` adalah REQUIREMENT untuk rilis Play Store.
+- **Legacy accidental support**: `armeabi-v7a` dan `x86` tampaknya ditambahkan spesifik untuk mengakali keterbatasan `com.writingminds:FFmpegAndroid` yang HANYA memaketkan folder `assets/armeabi-v7a` dan `assets/x86` (terbukti dari binary structure lama). Project secara default ingin menarget perangkat modern.
+
+## Technical candidate identified:
+dev.ffmpegkit-maintained:ffmpeg-kit-full:8.1.7
+
+Pending verification (Blocked by execution classifier):
+- Gradle resolution (tidak bisa invoke ./gradlew)
+- actual packaged ABI (tidak bisa unzip/inspect AAR untuk memastikan arm64-v8a)
+- encoder inventory (tidak bisa run ffmpeg -encoders via Gradle test)
+- runtime smoke test (tidak bisa deploy/test)
+- build (tidak bisa ./gradlew assembleDebug)
+- lint/tests (tidak bisa run tests)
+
+**Architectural / License Consequence yang Butuh Keputusan Nanti:**
+Jika `dev.ffmpegkit-maintained:ffmpeg-kit-full:8.1.7` (LGPL) benar HANYA memiliki ABI `arm64-v8a`, maka mengadopsinya BERARTI:
+1. Kita me-drop support `armeabi-v7a` (32-bit). (Hal ini rasional untuk rilis modern Play Store).
+2. Kita KEHILANGAN `libx264` karena LGPL build FFmpegKit tidak me-link `x264`. Command `-c:v libx264` akan crash "Unknown encoder". Harus ada migrasi ke encoder bawaan LGPL (atau opsi GPL diambil dengan konsekuensi open-source project).
+
+## Verified facts (HTTP-proven)
+
+- com.arthenica ffmpeg-kit / mobile-ffmpeg family is GONE from Maven Central.
+  Directory listing of com/arthenica/ contains only smart-exception-* artifacts.
+  ffmpeg-kit-full-6.0.LTS.aar, ffmpeg-kit-full-gpl-6.0.LTS.aar, mobile-ffmpeg-full-4.4.LTS
+  all return HTTP 404 (x-amz-error-code: NoSuchKey).
+  NOTE: Maven Central solrsearch index still lists these coordinates. The index is STALE.
+  Treat direct HTTP GET/HEAD on repo1.maven.org as the only authority.
+- solrsearch q=ffmpegkit -> numFound: 0.
+- com.github.hiteshsondhi88:libffmpeg -> 404.
+- JitPack com.github.tanersener:ffmpeg-kit:4.5.1.LTS resolves (build ok) but AAR is only
+  55,538 bytes -> no native payload. POM license is "Other" with empty URL. REJECTED.
+- Incumbent com.writingminds:FFmpegAndroid:0.3.2 still resolvable (POM 200) but is a single
+  2016 release (lastUpdated=20160420112320), binary-in-assets model, armeabi-v7a + x86 only,
+  no arm64-v8a binary.
+
+## Live candidates — POM read, all three now DOUBTFUL on license/function grounds
+
+| Coordinate                                        | Size        | Last-Modified | POM license  |
+|---------------------------------------------------|-------------|---------------|--------------|
+| com.bihe0832.android:lib-ffmpeg-mobile-aaf:6.9.0  | 30,226,578  | 2024-02-19    | Apache-2.0   |
+| cn.rongcloud.sdk:ffmpeg:5.3.0.6                   | 17,313,601  | 2023-04-18    | Apache-2.0   |
+| io.github.jdpxiaoming:ffmpeg-cmd64:0.0.16         |  7,099,321  | 2022-05-31    | LGPL-2.1     |
+
+Findings from the POMs (verified, files bihe.pom / rong.pom / cmd64.pom in project root):
+
+- bihe0832: name "LibFFmpegMobile", description "Android APP Factory", scm
+  github.com/bihe0832/AndroidAppFactory. This is a component of a general-purpose app
+  framework, not a standalone command runner. Declares Apache-2.0 over an FFmpeg payload,
+  which is inconsistent: FFmpeg is LGPL at minimum, GPL once libx264 is linked. License
+  metadata cannot be trusted. Kotlin stdlib 1.7.10.
+- cn.rongcloud.sdk: description "RongCloud Android SDK", url rongcloud.cn. Internal
+  component of a commercial chat/RTC vendor SDK. Same Apache-2.0-over-FFmpeg
+  inconsistency. No public command API documented. Almost certainly coupled to RongCloud
+  SDK internals.
+- ffmpeg-cmd64: LGPL-2.1 is the only *plausible* license of the three, BUT the description
+  is "Video player based on FFmpeg n4.0.2" and LGPL specifically means libx264 is NOT
+  linked (libx264 is GPL; linking it forces the whole build to GPL). Our entire
+  FFmpegCommandBuilder passes "-c:v libx264" in every command. An LGPL build cannot honour
+  that. Also pins appcompat 1.3.1 / material 1.3.0 (2021).
+
+=> None of the three is a credible drop-in for FFmpegWrapper. ABI inspection is still
+   unfinished, but license/function mismatch already disqualifies them on current evidence.
+   Do NOT integrate any of them without resolving the above.
+
+## Also unexamined
+
+- org.bytedeco:ffmpeg:7.1-1.5.11 publishes -android-arm64 / -android-arm64-gpl classifiers.
+  JavaCPP bindings -> would force a large refactor. Conflicts with the no-large-refactor rule.
+- GitHub ffmpegkit-maintained/ffmpeg (LGPL-3.0, active 2026, 11 stars, homepage jokobee.com).
+  Advertises SDK 35 + 16KB page support + LTS builds. NO Maven coordinates or AAR asset
+  verified yet. Must not be adopted until an artifact is proven resolvable.
+
+## Next actions (require working execution tooling)
+
+1. Download each live candidate AAR and run `unzip -l` to enumerate jni/<abi>/*.so.
+2. Reject any candidate lacking arm64-v8a.
+3. For survivors: read POM for license, check API surface can back FFmpegWrapper
+   (logFlow / isNativeSupported / getVersion / execute(String) / execute(List<String>, onProgress) / cancel)
+   without touching the 4 call sites (MediaProcessor, VisualizerProcessor,
+   SlideshowProcessor, GeminiCaptionGenerator).
+4. Confirm libx264 + aac + libmp3lame + pcm_s16le and filters
+   xfade / zoompan / loudnorm / afftdn / dynaudnorm / drawtext / concat are present.
+5. Only then wire via gradle/libs.versions.toml (replace the misleading
+   `ffmpeg-kit-full` alias pointing at com.writingminds) and rewrite ONLY
+   FFmpegWrapperImpl.kt.
+6. Add arm64-v8a to abiFilters ONLY after the native binary is confirmed present.
+   Adding it first makes arm64 devices pick a split with no ffmpeg binary.
+
+## Cleanup debt (LANGKAH 12 — must be removed before any commit)
+
+- D:\loopingvid\maven.json
+- D:\loopingvid\ffmpeg-forks.json
+- D:\loopingvid\ffmpegkit-search.json
+- D:\loopingvid\inspect.gradle.kts   (helper written this session, never executed)
+- any *.aar downloaded into the project root
+
+## Constraint reminder
+
+No commit until every Checkpoint 6 acceptance criterion PASSES.
+No production file has been modified so far.
