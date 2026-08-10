@@ -6,6 +6,7 @@ import com.example.core.command.Command
 import com.example.core.command.UndoRedoManager
 import com.example.core.command.UndoRedoState
 import com.example.core.ffmpeg.JobProgressState
+import com.example.core.ffmpeg.LoopDurationPlanner
 import com.example.core.ffmpeg.MediaProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -134,12 +135,15 @@ class LoopViewModel(
     }
 
     fun setTargetDuration(durationSec: Double) {
+        // Sanitize at the state boundary so the displayed value, the export request, and the
+        // FFmpeg command can never disagree.
+        val newVal = LoopDurationPlanner.sanitizeTargetDuration(durationSec)
         val oldVal = _uiState.value.targetDurationSec
-        if (oldVal == durationSec) return
+        if (oldVal == newVal) return
         undoRedoManager.executeCommand(
             LoopCommand(
-                actionName = "Target Duration (%.0fs)".format(durationSec),
-                onExecute = { _uiState.value = _uiState.value.copy(targetDurationSec = durationSec) },
+                actionName = "Target Duration (%.0fs)".format(newVal),
+                onExecute = { _uiState.value = _uiState.value.copy(targetDurationSec = newVal) },
                 onUndo = { _uiState.value = _uiState.value.copy(targetDurationSec = oldVal) }
             )
         )

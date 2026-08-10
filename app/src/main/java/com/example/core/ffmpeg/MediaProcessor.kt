@@ -131,11 +131,21 @@ class MediaProcessor(
                 }
             }
 
+            // Repetition is derived from the real segment length, not a fixed assumption. The
+            // exact output length is enforced by -t, so a failed probe cannot shorten the render.
+            val segmentDurationSec = probeDurationSec(actualInputUri)
+            val loopPlan = LoopDurationPlanner.planLoop(
+                segmentDurationSec = segmentDurationSec,
+                targetDurationSec = targetDurationSec
+            )
+
             val command = if (loopStyle.equals("CROSSFADE", ignoreCase = true)) {
                 FFmpegCommandBuilder.buildCrossfadeLoopCommand(
                     inputPath = actualInputUri,
                     outputPath = outputFile.absolutePath,
-                    durationSec = targetDurationSec,
+                    durationSec = loopPlan.outputDurationSec,
+                    targetDurationSec = loopPlan.outputDurationSec,
+                    muteAudio = muteAudio,
                     crossfadeDurationSec = crossfadeDurationSec,
                     resolution = presetQuality,
                     frameRate = frameRate,
@@ -146,7 +156,9 @@ class MediaProcessor(
                 FFmpegCommandBuilder.buildNormalLoopCommand(
                     inputPath = actualInputUri,
                     outputPath = outputFile.absolutePath,
-                    loopCount = (targetDurationSec / 10).toInt().coerceAtLeast(1),
+                    loopCount = loopPlan.streamLoopCount,
+                    targetDurationSec = loopPlan.outputDurationSec,
+                    muteAudio = muteAudio,
                     presetQuality = presetQuality,
                     resolution = resolution,
                     frameRate = frameRate,
@@ -235,6 +247,34 @@ class MediaProcessor(
                 errorMessage = e.localizedMessage ?: "Render failed"
             )
             throw e
+        }
+    }
+
+    /**
+     * Reads the real duration of a local/content media path. Returns 0.0 when it cannot be
+     * determined, so callers must treat 0.0 as "unknown" rather than "zero-length".
+     */
+    private fun probeDurationSec(path: String): Double {
+        val retriever = android.media.MediaMetadataRetriever()
+        return try {
+            if (path.startsWith("content://")) {
+                retriever.setDataSource(context, android.net.Uri.parse(path))
+            } else {
+                retriever.setDataSource(path)
+            }
+            val durationMs = retriever
+                .extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)
+                ?.toLongOrNull()
+            (durationMs ?: 0L) / 1000.0
+        } catch (e: Exception) {
+            Timber.w("Failed to probe media duration for %s: %s", path, e.message)
+            0.0
+        } finally {
+            try {
+                retriever.release()
+            } catch (e: Exception) {
+                Timber.w("Failed to release MediaMetadataRetriever: %s", e.message)
+            }
         }
     }
 

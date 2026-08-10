@@ -113,6 +113,8 @@ object FFmpegCommandBuilder {
         inputPath: String,
         outputPath: String,
         loopCount: Int,
+        targetDurationSec: Double,
+        muteAudio: Boolean = false,
         presetQuality: String = "1080p",
         resolution: String = "1080p",
         frameRate: String = "30fps",
@@ -122,14 +124,12 @@ object FFmpegCommandBuilder {
         val args = mutableListOf(
             "-stream_loop", loopCount.toString(),
             "-i", inputPath,
+            "-t", formatDuration(targetDurationSec),
             "-c:v", "libx264"
         )
         args.addAll(getVideoExportArgs(resolution, frameRate, bitrate, aspectRatio))
-        args.addAll(listOf(
-            "-c:a", "aac",
-            "-b:a", "192k",
-            "-y", outputPath
-        ))
+        appendAudioArgs(args, muteAudio)
+        args.addAll(listOf("-y", outputPath))
         return args
     }
 
@@ -137,6 +137,8 @@ object FFmpegCommandBuilder {
         inputPath: String,
         outputPath: String,
         durationSec: Double,
+        targetDurationSec: Double = durationSec,
+        muteAudio: Boolean = false,
         crossfadeDurationSec: Double = 1.0,
         resolution: String = "1080p",
         frameRate: String = "30fps",
@@ -172,15 +174,27 @@ object FFmpegCommandBuilder {
         val args = mutableListOf(
             "-i", inputPath,
             "-filter_complex", filterGraph,
+            "-t", formatDuration(targetDurationSec),
             "-c:v", "libx264",
             "-preset", "ultrafast",
             "-r", fps,
-            "-b:v", bv, "-maxrate", bv, "-bufsize", "${bv.replace("M", "")}M",
-            "-c:a", "aac",
-            "-y", outputPath
+            "-b:v", bv, "-maxrate", bv, "-bufsize", "${bv.replace("M", "")}M"
         )
+        appendAudioArgs(args, muteAudio)
+        args.addAll(listOf("-y", outputPath))
         return args
     }
+
+    private fun appendAudioArgs(args: MutableList<String>, muteAudio: Boolean) {
+        if (muteAudio) {
+            args.add("-an")
+            return
+        }
+        args.addAll(listOf("-c:a", "aac", "-b:a", "192k"))
+    }
+
+    private fun formatDuration(durationSec: Double): String =
+        String.format(java.util.Locale.US, "%.3f", durationSec)
 
     fun buildMasteringCommand(
         inputPath: String,
