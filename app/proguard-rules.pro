@@ -58,6 +58,14 @@
 # --- Application data classes used by Moshi/Room ---
 -keep class com.example.**.entity.** { *; }
 -keep class com.example.**.model.** { *; }
+# These models use KotlinJsonAdapterFactory reflection instead of generated adapters.
+-keep class com.example.core.audio.AudioAnalysisResult { *; }
+-keep class com.example.core.audio.WaveformData { *; }
+-keep class com.example.core.audio.SpectrumData { *; }
+-keep class com.example.core.audio.BpmData { *; }
+-keep class com.example.core.audio.LoudnessData { *; }
+-keep class com.example.core.presets.ExportPreset { *; }
+-keep class com.example.core.presets.PresetCategory { *; }
 
 # --- Timber ---
 -dontwarn org.jetbrains.annotations.**

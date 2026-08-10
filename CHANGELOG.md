@@ -45,9 +45,10 @@ rather than adding new surface area.
 
 - The local database is not encrypted at rest. Disabling backup blocks
   extraction over adb, but the data remains readable on a rooted device.
-- Code shrinking and obfuscation (R8) remain disabled for release builds.
-  ProGuard rules were drafted for Room, Moshi, Retrofit/OkHttp, Firebase, and
-  FFmpegKit, but enabling R8 needs an on-device runtime pass before it ships,
+- R8 minification is enabled for release builds with keep rules for Room, Moshi,
+  Retrofit/OkHttp, Firebase, FFmpegKit, and Moshi reflection models. The unsigned
+  release APK builds at 39,706,841 bytes (~37.9 MiB), below the 50MB target. An
+  ARM64 device/emulator runtime pass is still required before signed release,
   since misconfigured keep rules typically fail at runtime, not compile time.
 - `abiFilters` now targets `arm64-v8a` only, and the debug APK was verified to
   carry the FFmpegKit native objects for that ABI. The engine itself has not yet

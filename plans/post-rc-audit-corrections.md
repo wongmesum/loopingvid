@@ -66,3 +66,8 @@
   - CI workflow: step `Build test APK` ditambahkan; job emulator ARM64 tidak di-commit (konfigurasi belum terverifikasi).
   - Dokumentasi dikoreksi: modul README (hapus full-gpl/JNI fiktif), CHANGELOG, README utama, plan file.
   - Release signing = BLOCKED (env vars `KEYSTORE_PATH`/`STORE_PASSWORD`/`KEY_PASSWORD` tidak tersedia di host ini).
+  - Release hardening R8: `isMinifyEnabled = true` (shrinkResources tetap `false` agar mode kegagalan tidak ambigu).
+  - Keep rules ditambah untuk model yang dipakai `KotlinJsonAdapterFactory` (refleksi): `AudioAnalysisResult`, `WaveformData`, `SpectrumData`, `BpmData`, `LoudnessData`, `ExportPreset`, `PresetCategory`. Rule lama hanya menutup `**.entity.**`/`**.model.**`, jadi cache audio analysis dan custom preset akan pecah saat runtime tanpa tambahan ini.
+  - Model Gemini di `GeminiCaptionGenerator.kt` sengaja TIDAK diberi keep rule: semuanya `@JsonClass(generateAdapter = true)` (codegen, bukan refleksi).
+  - Verifikasi R8: `testDebugUnitTest` + `lintDebug` + `assembleRelease` + `bundleRelease` PASS (34m 2s). APK unsigned = 39.706.841 bytes (~37,9 MiB), di bawah target 50MB.
+  - Catatan batas bukti: build hijau hanya membuktikan R8 tidak memutus kompilasi. Kebenaran keep rule di jalur refleksi baru terbukti saat runtime, dan runtime ARM64 masih NOT RUN.

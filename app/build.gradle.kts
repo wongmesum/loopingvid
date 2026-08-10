@@ -52,7 +52,10 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      // R8 is enabled so the rules in proguard-rules.pro actually take effect. Resource
+      // shrinking stays off for now: it is a separate failure mode, and enabling both at
+      // once makes a broken release build ambiguous to diagnose.
+      isMinifyEnabled = true
       isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       // Null leaves the APK unsigned; a distributable build requires the env vars above.
