@@ -1,4 +1,5 @@
 import com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy
+import java.util.Properties
 
 plugins {
   alias(libs.plugins.android.application)
@@ -9,6 +10,24 @@ plugins {
   alias(libs.plugins.google.services)
   jacoco
 }
+
+// Local signing config stays optional so developer builds work without release credentials.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties().apply {
+  if (keystorePropertiesFile.isFile) {
+    keystorePropertiesFile.inputStream().use { load(it) }
+  }
+}
+val releaseKeystorePath: String? = keystoreProperties.getProperty("storeFile")
+val releaseKeystore = releaseKeystorePath?.let(rootProject::file)
+val releaseStorePassword: String? = keystoreProperties.getProperty("storePassword")
+val releaseKeyAlias: String? = keystoreProperties.getProperty("keyAlias")
+val releaseKeyPassword: String? = keystoreProperties.getProperty("keyPassword")
+val canSignRelease =
+  releaseKeystore?.isFile == true &&
+    !releaseStorePassword.isNullOrBlank() &&
+    !releaseKeyAlias.isNullOrBlank() &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
   namespace = "com.example"
@@ -28,23 +47,13 @@ android {
     }
   }
 
-  // The upload keystore is deliberately absent from the repository, so the signing config is
-  // only registered when a real keystore plus both passwords are available. Declaring it
-  // unconditionally makes packageRelease fail at execution time on any machine without the
-  // key, which blocks local release-candidate verification for no security benefit.
-  val releaseKeystore = file(System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks")
-  val releaseStorePassword: String? = System.getenv("STORE_PASSWORD")
-  val releaseKeyPassword: String? = System.getenv("KEY_PASSWORD")
-  val canSignRelease =
-    releaseKeystore.exists() && !releaseStorePassword.isNullOrBlank() && !releaseKeyPassword.isNullOrBlank()
-
   signingConfigs {
     if (canSignRelease) {
       create("release") {
-        storeFile = releaseKeystore
-        storePassword = releaseStorePassword
-        keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
-        keyPassword = releaseKeyPassword
+        storeFile = releaseKeystore!!
+        storePassword = releaseStorePassword!!
+        keyAlias = releaseKeyAlias!!
+        keyPassword = releaseKeyPassword!!
       }
     }
   }
@@ -58,7 +67,7 @@ android {
       isMinifyEnabled = true
       isShrinkResources = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      // Null leaves the APK unsigned; a distributable build requires the env vars above.
+      // Null leaves the APK unsigned; a distributable build requires keystore.properties above.
       signingConfig = signingConfigs.findByName("release")
     }
     debug {
