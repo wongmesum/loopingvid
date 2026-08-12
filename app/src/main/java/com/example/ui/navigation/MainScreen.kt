@@ -284,7 +284,9 @@ fun MainScreen(
 
             com.example.core.ui.ExportSummaryDialog(
                 summaryData = exportState.completedExportSummary,
-                onDismiss = { exportViewModel.dismissSummary() }
+                onDismiss = { exportViewModel.dismissSummary() },
+                onSaveToGallery = { exportViewModel.saveCompletedExportToGallery() },
+                exportState = exportState.galleryExportState
             )
 
             com.example.core.ui.OnboardingOverlay(

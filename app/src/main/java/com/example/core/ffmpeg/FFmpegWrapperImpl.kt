@@ -25,6 +25,13 @@ class FFmpegWrapperImpl(@Suppress("UNUSED_PARAMETER") private val context: Conte
 
     companion object {
         private const val TAG = "FFmpegWrapperImpl"
+
+        /**
+         * Distinct from a generic failure: a cancelled session is a user action, not an error,
+         * so callers must not report it as a failed render.
+         */
+        const val RETURN_CODE_CANCELLED = 255
+        const val RETURN_CODE_FAILED = 1
     }
 
     private val _logFlow = MutableSharedFlow<String>(extraBufferCapacity = 256)
@@ -77,6 +84,7 @@ class FFmpegWrapperImpl(@Suppress("UNUSED_PARAMETER") private val context: Conte
 
     override suspend fun execute(
         commandArgs: List<String>,
+        onStatistics: suspend (FFmpegProgress) -> Unit,
         onProgress: suspend (Int) -> Unit
     ): Int = withContext(Dispatchers.IO) {
         safeInitialize()
@@ -104,11 +112,15 @@ class FFmpegWrapperImpl(@Suppress("UNUSED_PARAMETER") private val context: Conte
                             Timber.i("FFmpeg command finished successfully")
                             _logFlow.tryEmit("FFmpeg [success]: Command completed with exit code 0.")
                             if (continuation.isActive) continuation.resume(0)
+                        } else if (ReturnCode.isCancel(returnCode)) {
+                            Timber.w("FFmpeg command was cancelled by user")
+                            _logFlow.tryEmit("FFmpeg [cancelled]: Execution stopped.")
+                            if (continuation.isActive) continuation.resume(RETURN_CODE_CANCELLED)
                         } else {
                             val message = completedSession.failStackTrace ?: "exit code $returnCode"
                             Timber.e("FFmpeg execution failed: %s", message)
                             _logFlow.tryEmit("FFmpeg [error]: Command failed. $message")
-                            if (continuation.isActive) continuation.resume(1)
+                            if (continuation.isActive) continuation.resume(RETURN_CODE_FAILED)
                         }
                     },
                     { log ->
@@ -121,10 +133,16 @@ class FFmpegWrapperImpl(@Suppress("UNUSED_PARAMETER") private val context: Conte
                     },
                     { statistics ->
                         if (targetDurationSec > 0.0) {
-                            val progress = ((statistics.time / 1000.0 / targetDurationSec) * 100.0)
+                            // FFmpegKit reports time as a floating-point millisecond value.
+                            val processedMs = statistics.time.toLong()
+                            val targetMs = (targetDurationSec * 1000).toLong()
+                            val progress = ((processedMs / 1000.0 / targetDurationSec) * 100.0)
                                 .toInt()
                                 .coerceIn(0, 100)
-                            scope.launch { onProgress(progress) }
+                            scope.launch {
+                                onProgress(progress)
+                                onStatistics(FFmpegProgress(processedMs, targetMs, progress))
+                            }
                         }
                     }
                 )
@@ -139,6 +157,44 @@ class FFmpegWrapperImpl(@Suppress("UNUSED_PARAMETER") private val context: Conte
                 _logFlow.tryEmit("FFmpeg [error]: Execution failed due to system/native error.")
                 if (t !is CancellationException && continuation.isActive) {
                     continuation.resume(1)
+                }
+            }
+        }
+    }
+
+    override suspend fun executeForOutput(commandArgs: List<String>): FFmpegExecution = withContext(Dispatchers.IO) {
+        safeInitialize()
+        if (!isSupported) {
+            failExecution("Native FFmpeg engine is not supported on this device")
+            return@withContext FFmpegExecution(RETURN_CODE_FAILED, "")
+        }
+
+        val arguments = commandArgs.toTypedArray()
+        Timber.i("Executing FFmpeg analysis: ffmpeg %s", commandArgs.joinToString(" "))
+
+        suspendCancellableCoroutine { continuation ->
+            try {
+                val session = FFmpegKit.executeWithArgumentsAsync(
+                    arguments,
+                    { completedSession ->
+                        synchronized(sessionLock) { activeSession = null }
+                        val returnCode = completedSession.returnCode
+                        val finalOutput = completedSession.allLogsAsString ?: ""
+                        val resolvedReturn = if (ReturnCode.isSuccess(returnCode)) 0
+                            else if (ReturnCode.isCancel(returnCode)) RETURN_CODE_CANCELLED
+                            else RETURN_CODE_FAILED
+                        if (continuation.isActive) {
+                            continuation.resume(FFmpegExecution(resolvedReturn, finalOutput))
+                        }
+                    },
+                    { _ -> },
+                    { _ -> }
+                )
+                synchronized(sessionLock) { activeSession = session }
+                continuation.invokeOnCancellation { cancel() }
+            } catch (t: Throwable) {
+                if (t !is CancellationException && continuation.isActive) {
+                    continuation.resume(FFmpegExecution(RETURN_CODE_FAILED, ""))
                 }
             }
         }

@@ -1,12 +1,15 @@
 package com.example.core.ui
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.core.ffmpeg.ExportState
 import com.example.core.ffmpeg.MediaProcessor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ExportUiState(
@@ -22,7 +25,8 @@ data class ExportUiState(
     val selectedFrameRate: String = "30fps",
     val selectedBitrate: String = "Medium",
     val selectedAspectRatio: String = "Asli",
-    val completedExportSummary: ExportSummaryData? = null
+    val completedExportSummary: ExportSummaryData? = null,
+    val galleryExportState: ExportState = ExportState.Idle
 )
 
 sealed class ExportJobConfig {
@@ -268,7 +272,33 @@ class ExportViewModel(
     }
 
     fun dismissSummary() {
-        _uiState.value = _uiState.value.copy(completedExportSummary = null)
+        _uiState.update {
+            it.copy(completedExportSummary = null, galleryExportState = ExportState.Idle)
+        }
+    }
+
+    /**
+     * Publishes the validated render output to the device gallery by copying the file that
+     * processing already produced in app-private cache. FFmpeg is never invoked again here:
+     * the only source of a publishable path is a completed summary.
+     */
+    fun saveCompletedExportToGallery() {
+        val summary = _uiState.value.completedExportSummary ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(galleryExportState = ExportState.Exporting) }
+            val result = mediaProcessor.exportProjectToGallery(
+                filePath = summary.filePath,
+                customTitle = summary.fileName,
+                isAudio = !summary.isVideo
+            )
+            result.onSuccess { uri: Uri ->
+                _uiState.update { it.copy(galleryExportState = ExportState.Success(uri)) }
+            }.onFailure { error ->
+                val message = error.localizedMessage ?: "Gagal menyimpan ke galeri"
+                _uiState.update { it.copy(galleryExportState = ExportState.Failed(message)) }
+            }
+        }
     }
 
     fun showSummaryForJob(
@@ -298,32 +328,14 @@ class ExportViewModel(
     fun confirmExport() {
         val state = _uiState.value
         val config = currentJobConfig ?: return
-        
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val completedJob = when (config) {
-                    is ExportJobConfig.LoopJob -> {
-                        val quality = config.presetQuality
-                        mediaProcessor.executeLoopJob(
-                            inputUri = config.inputUri,
-                            targetDurationSec = config.targetDurationSec,
-                            loopStyle = config.loopStyle,
-                            crossfadeDurationSec = config.crossfadeDurationSec,
-                            trimStartSec = config.trimStartSec,
-                            trimEndSec = config.trimEndSec,
-                            muteAudio = config.muteAudio,
-                            audioFadeInSec = config.audioFadeInSec,
-                            audioFadeOutSec = config.audioFadeOutSec,
-                            presetQuality = quality,
-                            customFileName = state.fileName,
-                            destinationFolder = state.selectedDestination,
-                            exportFormat = state.selectedFormat,
-                            resolution = state.selectedResolution,
-                            frameRate = state.selectedFrameRate,
-                            bitrate = state.selectedBitrate,
-                            aspectRatio = state.selectedAspectRatio
-                        )
-                    }
+                    // Loop is rendered exactly once into app-private cache by LoopViewModel and
+                    // then saved by copying that validated output. Re-running FFmpeg here would
+                    // encode a second time and could publish an unvalidated file.
+                    is ExportJobConfig.LoopJob -> return@launch
                     is ExportJobConfig.MasteringJob -> {
                         mediaProcessor.executeMasteringJob(
                             inputUri = config.inputUri,

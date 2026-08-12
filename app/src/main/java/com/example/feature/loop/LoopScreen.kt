@@ -1,6 +1,9 @@
 package com.example.feature.loop
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -40,6 +43,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -76,7 +80,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
+import com.example.core.ffmpeg.ExportState
+import com.example.core.ffmpeg.RenderState
 import com.example.core.media.AudioSpectrumVisualizer
+import java.io.File
+import java.util.Locale
 import com.example.core.media.SpectrumStyle
 import com.example.core.ui.UndoRedoBar
 import com.example.core.ui.VideoPlayer
@@ -93,6 +102,7 @@ fun LoopScreen(
     val uiState by viewModel.uiState.collectAsState()
     val undoRedoState by viewModel.undoRedoState.collectAsState()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
     var isManualDurationMode by remember { mutableStateOf(false) }
     var manualDurationText by remember(uiState.targetDurationSec) {
@@ -682,20 +692,14 @@ fun LoopScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (!uiState.jobProgress.isProcessing) {
+                val renderState = uiState.renderState
+                val isRenderInFlight = renderState is RenderState.Preparing ||
+                    renderState is RenderState.Rendering ||
+                    renderState is RenderState.Validating
+
+                if (!isRenderInFlight) {
                     Button(
-                        onClick = { exportViewModel.showDialogForLoop("LoopVideo", com.example.core.ui.ExportJobConfig.LoopJob(
-                                inputUri = uiState.selectedMediaUri!!,
-                                targetDurationSec = uiState.targetDurationSec,
-                                loopStyle = uiState.loopStyle,
-                                crossfadeDurationSec = uiState.crossfadeDurationSec,
-                                trimStartSec = uiState.trimStartSec,
-                                trimEndSec = uiState.trimEndSec,
-                                muteAudio = uiState.muteAudio,
-                                audioFadeInSec = uiState.audioFadeInSec,
-                                audioFadeOutSec = uiState.audioFadeOutSec,
-                                presetQuality = uiState.presetQuality
-                            )) },
+                        onClick = { viewModel.startRenderJob() },
                         enabled = uiState.selectedMediaUri != null,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -712,18 +716,31 @@ fun LoopScreen(
                         )
                     }
                 } else {
+                    val progressPercent = when (renderState) {
+                        is RenderState.Rendering -> renderState.progress
+                        is RenderState.Validating -> 99
+                        else -> 0
+                    }
+                    val statusText = when (renderState) {
+                        is RenderState.Preparing -> "Preparing render..."
+                        is RenderState.Rendering -> "Encoding (${renderState.progress}%)"
+                        is RenderState.Validating -> "Validating output..."
+                        else -> ""
+                    }
                     FfmpegCircularProgressIndicator(
-                        progress = uiState.jobProgress.progress,
-                        statusText = uiState.jobProgress.statusText,
+                        progress = progressPercent,
+                        statusText = statusText,
                         title = "FFmpeg Seamless Video Loop Processing",
                         accentColor = MaterialTheme.colorScheme.primary,
                         onCancel = { viewModel.cancelRenderJob() }
                     )
                 }
 
-                // Go Live Direct Pipeline
-                AnimatedVisibility(visible = uiState.lastRenderedOutputUri != null) {
-                    uiState.lastRenderedOutputUri?.let { renderedPath ->
+                // Result actions appear only after return code, file, size, and duration validation.
+                AnimatedVisibility(visible = renderState is RenderState.Success) {
+                    (renderState as? RenderState.Success)?.let { success ->
+                        val fileSizeMb = success.fileSizeBytes / (1024.0 * 1024.0)
+                        val isExporting = uiState.exportState is ExportState.Exporting
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -734,18 +751,79 @@ fun LoopScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = "Success",
+                                    contentDescription = "Render complete",
                                     tint = MaterialTheme.colorScheme.secondary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Render Ready for Live Streaming!",
+                                    text = "Render Complete",
                                     style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                     color = MaterialTheme.colorScheme.secondary
                                 )
                             }
+                            Text("Duration: ${formatTimeMs(success.durationMs)}")
+                            Text("Size: ${String.format(Locale.US, "%.2f MB", fileSizeMb)}")
+                            Text("Resolution: ${success.resolution}")
+                            Text("Location: ${success.outputPath}")
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val fileUri = renderFileUri(context, success.outputPath)
+                                        val intent = Intent(Intent.ACTION_VIEW).apply {
+                                            setDataAndType(fileUri, "video/mp4")
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        runCatching { context.startActivity(intent) }
+                                            .onFailure { Toast.makeText(context, "Unable to play rendered video", Toast.LENGTH_SHORT).show() }
+                                    },
+                                    modifier = Modifier.weight(1f).testTag("play_render_button")
+                                ) {
+                                    Icon(Icons.Default.PlayArrow, contentDescription = "Play")
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Play")
+                                }
+                                Button(
+                                    onClick = { viewModel.saveRenderToGallery() },
+                                    enabled = !isExporting,
+                                    modifier = Modifier.weight(1f).testTag("save_render_button")
+                                ) {
+                                    Icon(Icons.Default.Movie, contentDescription = "Save")
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(if (isExporting) "Saving..." else "Save")
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        val shareUri = renderFileUri(context, success.outputPath)
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "video/mp4"
+                                            putExtra(Intent.EXTRA_STREAM, shareUri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Share rendered video"))
+                                    },
+                                    modifier = Modifier.weight(1f).testTag("share_render_button")
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = "Share")
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Share")
+                                }
+                            }
+
+                            when (val exportState = uiState.exportState) {
+                                is ExportState.Success -> Text("Saved to gallery: ${exportState.uri}")
+                                is ExportState.Failed -> Text(
+                                    "Save failed: ${exportState.message}",
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                else -> Unit
+                            }
+
                             Button(
-                                onClick = { onNavigateToGoLive(renderedPath) },
+                                onClick = { onNavigateToGoLive(success.outputPath) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("go_live_with_this_button"),
@@ -763,6 +841,17 @@ fun LoopScreen(
 
 }
 }
+
+/**
+ * Renders live in app-private cache, so a raw file:// Uri would be rejected on modern Android.
+ * FileProvider grants scoped read access to the single render directory only.
+ */
+private fun renderFileUri(context: Context, path: String): Uri =
+    FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.render-files",
+        File(path)
+    )
 
 private fun formatTimeMs(timeMs: Long): String {
     val totalSeconds = (timeMs / 1000).toInt().coerceAtLeast(0)

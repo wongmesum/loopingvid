@@ -2,6 +2,7 @@ package com.example.feature.loop
 
 import com.example.core.ffmpeg.LoopDurationPlanner
 import com.example.core.ffmpeg.MediaProcessor
+import com.example.core.ffmpeg.RenderState
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ class LoopViewModelDurationTest {
     private fun createViewModel(): LoopViewModel {
         val processor = mockk<MediaProcessor>(relaxed = true)
         every { processor.progressState } returns MutableStateFlow(mockk(relaxed = true))
+        every { processor.renderState } returns MutableStateFlow(RenderState.Idle)
         return LoopViewModel(processor)
     }
 

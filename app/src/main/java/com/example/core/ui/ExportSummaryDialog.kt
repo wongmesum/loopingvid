@@ -51,6 +51,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -81,6 +82,8 @@ import java.io.File
 fun ExportSummaryDialog(
     summaryData: ExportSummaryData?,
     onDismiss: () -> Unit,
+    onSaveToGallery: () -> Unit = {},
+    exportState: com.example.core.ffmpeg.ExportState = com.example.core.ffmpeg.ExportState.Idle,
     modifier: Modifier = Modifier
 ) {
     if (summaryData == null) return
@@ -424,7 +427,9 @@ fun ExportSummaryDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
                 Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                GalleryExportStatus(exportState = exportState)
 
                 // Bottom Action Buttons Row
                 Row(
@@ -460,29 +465,25 @@ fun ExportSummaryDialog(
                         Text("Share")
                     }
 
+                    // Saving copies the validated cache output into the gallery; it never
+                    // re-encodes, and the cache path itself is not readable by other apps.
                     OutlinedButton(
-                        onClick = {
-                            try {
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(
-                                        Uri.fromFile(File(summaryData.filePath)),
-                                        if (summaryData.isVideo) "video/*" else "audio/*"
-                                    )
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(intent)
-                            } catch (e: Exception) {
-                                Toast.makeText(context, "Asset saved to gallery Movies folder", Toast.LENGTH_SHORT).show()
-                            }
-                        },
+                        onClick = onSaveToGallery,
+                        enabled = exportState !is com.example.core.ffmpeg.ExportState.Exporting,
                         modifier = Modifier
                             .weight(1f)
                             .testTag("open_gallery_button"),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.OpenInNew, contentDescription = "Gallery", modifier = Modifier.size(18.dp))
+                        Icon(imageVector = Icons.Default.OpenInNew, contentDescription = "Simpan ke galeri", modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Gallery")
+                        Text(
+                            text = when (exportState) {
+                                is com.example.core.ffmpeg.ExportState.Exporting -> "Menyimpan..."
+                                is com.example.core.ffmpeg.ExportState.Success -> "Tersimpan"
+                                else -> "Simpan"
+                            }
+                        )
                     }
 
                     Button(
@@ -640,6 +641,80 @@ private fun SocialPlatformCard(platform: SocialPlatformCompatibility) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun GalleryExportStatus(exportState: com.example.core.ffmpeg.ExportState) {
+    if (exportState is com.example.core.ffmpeg.ExportState.Idle ||
+        exportState is com.example.core.ffmpeg.ExportState.ChoosingDestination
+    ) {
+        return
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        when (exportState) {
+            is com.example.core.ffmpeg.ExportState.Exporting -> {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Menyalin ke galeri perangkat...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            is com.example.core.ffmpeg.ExportState.Success -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Success",
+                        tint = Color(0xFF10B981),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Berhasil disimpan ke galeri (MediaStore)",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFF10B981)
+                    )
+                }
+            }
+
+            is com.example.core.ffmpeg.ExportState.Failed -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = "Failed",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = exportState.message,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.error,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            else -> Unit
         }
     }
 }

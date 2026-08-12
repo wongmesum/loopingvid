@@ -291,15 +291,15 @@ fun ExportDialog(
                             coroutineScope.launch(Dispatchers.Default) {
                                 onEnqueue(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
                             }
-                            onDismiss()
                         }) {
                             Text("Antrekan")
                         }
                     }
                     Button(onClick = {
-                        coroutineScope.launch(Dispatchers.Default) {
-                            onConfirm(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
-                        }
+                        // onConfirm must run BEFORE onDismiss clears currentJobConfig.
+                        // confirmExport() captures the config into a local val and launches its
+                        // own IO coroutine internally, so calling it synchronously is safe.
+                        onConfirm(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
                         onDismiss()
                     }) {
                         Text("Ekspor Sekarang")

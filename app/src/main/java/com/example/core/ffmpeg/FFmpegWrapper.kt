@@ -5,6 +5,12 @@ import kotlinx.coroutines.flow.Flow
 /**
  * FFmpeg Wrapper Interface for media processing commands in LoopingVid Studio.
  */
+data class FFmpegProgress(
+    val processedMs: Long,
+    val targetMs: Long,
+    val percent: Int
+)
+
 interface FFmpegWrapper {
     /**
      * Shared flow emitting live execution logs from FFmpeg.
@@ -36,14 +42,29 @@ interface FFmpegWrapper {
      */
     suspend fun execute(
         commandArgs: List<String>,
+        // Declared before onProgress so existing trailing-lambda call sites keep binding to
+        // onProgress rather than silently switching to the statistics callback.
+        onStatistics: suspend (FFmpegProgress) -> Unit = {},
         onProgress: suspend (Int) -> Unit = {}
     ): Int
+
+    /**
+     * Executes a command and returns its exit code together with the complete session output.
+     * Analysis passes (e.g. loudnorm measurement) need the printed report, and reading it from
+     * the finished session avoids the subscribe-too-late race a log flow would have.
+     */
+    suspend fun executeForOutput(commandArgs: List<String>): FFmpegExecution
 
     /**
      * Cancels any active FFmpeg execution session.
      */
     fun cancel()
 }
+
+data class FFmpegExecution(
+    val returnCode: Int,
+    val output: String
+)
 
 /**
  * FFmpeg Command Builder Utility for video looping, audio mastering, and editor processing.
@@ -64,9 +85,8 @@ object FFmpegCommandBuilder {
             "-ss", String.format(java.util.Locale.US, "%.3f", trimStartSec),
             "-i", inputPath,
             "-t", String.format(java.util.Locale.US, "%.3f", duration),
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-crf", "18",
+            "-c:v", "libopenh264",
+            "-b:v", "8M",
             "-c:a", "aac",
             "-b:a", "192k",
             "-y", outputPath
@@ -104,8 +124,8 @@ object FFmpegCommandBuilder {
             "High" -> "8M"
             else -> "4M"
         }
-        args.addAll(listOf("-b:v", bv, "-maxrate", bv, "-bufsize", "${bv.replace("M", "")}M", "-preset", "ultrafast"))
-        
+        args.addAll(listOf("-b:v", bv, "-maxrate", bv, "-bufsize", "${bv.replace("M", "")}M"))
+
         return args
     }
 
@@ -125,7 +145,7 @@ object FFmpegCommandBuilder {
             "-stream_loop", loopCount.toString(),
             "-i", inputPath,
             "-t", formatDuration(targetDurationSec),
-            "-c:v", "libx264"
+            "-c:v", "libopenh264"
         )
         args.addAll(getVideoExportArgs(resolution, frameRate, bitrate, aspectRatio))
         appendAudioArgs(args, muteAudio)
@@ -133,6 +153,10 @@ object FFmpegCommandBuilder {
         return args
     }
 
+    /**
+     * Builds a valid single-input looping command. `xfade` requires two input streams;
+     * using it with one input caused FFmpeg to write a partial container then fail.
+     */
     fun buildCrossfadeLoopCommand(
         inputPath: String,
         outputPath: String,
@@ -140,6 +164,7 @@ object FFmpegCommandBuilder {
         targetDurationSec: Double = durationSec,
         muteAudio: Boolean = false,
         crossfadeDurationSec: Double = 1.0,
+        loopCount: Int = 0,
         resolution: String = "1080p",
         frameRate: String = "30fps",
         bitrate: String = "Medium",
@@ -152,7 +177,7 @@ object FFmpegCommandBuilder {
             "480p" -> "854"
             else -> "1920"
         }
-        
+
         val scaleFilter = when (aspectRatio) {
             "16:9" -> "crop=min(iw\\,ih*16/9):min(ih\\,iw*9/16),scale=w=$maxDim:h=-2"
             "9:16" -> "crop=min(iw\\,ih*9/16):min(ih\\,iw*16/9),scale=w=-2:h=$maxDim"
@@ -160,9 +185,11 @@ object FFmpegCommandBuilder {
             "4:5" -> "crop=min(iw\\,ih*4/5):min(ih\\,iw*5/4),scale=w=-2:h=$maxDim"
             else -> "scale=w=$maxDim:h=$maxDim:force_original_aspect_ratio=decrease"
         }
-        
-        val filterGraph = "xfade=transition=fade:duration=$crossfadeDurationSec:offset=${(durationSec - crossfadeDurationSec).coerceAtLeast(0.1)},$scaleFilter"
-        
+        val fadeDuration = crossfadeDurationSec.coerceAtLeast(0.1)
+        val fadeOutStart = (targetDurationSec - fadeDuration).coerceAtLeast(0.0)
+        val filterGraph = "$scaleFilter,fade=t=in:st=0:d=${formatDuration(fadeDuration)}," +
+            "fade=t=out:st=${formatDuration(fadeOutStart)}:d=${formatDuration(fadeDuration)}"
+
         val fps = frameRate.replace("fps", "")
         val bv = when (bitrate) {
             "Low" -> "1M"
@@ -172,11 +199,11 @@ object FFmpegCommandBuilder {
         }
 
         val args = mutableListOf(
+            "-stream_loop", loopCount.coerceAtLeast(0).toString(),
             "-i", inputPath,
-            "-filter_complex", filterGraph,
+            "-vf", filterGraph,
             "-t", formatDuration(targetDurationSec),
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
+            "-c:v", "libopenh264",
             "-r", fps,
             "-b:v", bv, "-maxrate", bv, "-bufsize", "${bv.replace("M", "")}M"
         )
@@ -263,10 +290,15 @@ object FFmpegCommandBuilder {
             }
         }
 
+        val audioCodec = when (audioFormat.lowercase()) {
+            "wav" -> "pcm_s16le"
+            "m4a", "aac" -> "aac"
+            else -> "libmp3lame"
+        }
         val baseCommand = mutableListOf(
             "-i", inputPath,
             "-af", loudnormFilter,
-            "-c:a", if (audioFormat.equals("wav", ignoreCase = true)) "pcm_s16le" else "libmp3lame",
+            "-c:a", audioCodec,
             "-b:a", "320k"
         )
         baseCommand.addAll(metadataArgs)
@@ -382,8 +414,8 @@ object FFmpegCommandBuilder {
         commands.addAll(
             listOf(
                 "-af", loudnormFilter,
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
+                // libopenh264 is the encoder shipped in this build; libx264 is GPL and absent.
+                "-c:v", "libopenh264",
                 "-b:v", bv, "-maxrate", bv, "-bufsize", "${bv.replace("M", "")}M",
                 "-c:a", "aac",
                 "-b:a", "192k",

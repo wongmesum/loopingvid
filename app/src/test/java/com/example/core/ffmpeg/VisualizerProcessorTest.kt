@@ -30,11 +30,18 @@ open class DummyFFmpegWrapper : FFmpegWrapper {
 
     override suspend fun execute(command: String): Int = exitCodeToReturn
 
-    override suspend fun execute(commandArgs: List<String>, onProgress: suspend (Int) -> Unit): Int {
+    override suspend fun execute(commandArgs: List<String>, onStatistics: suspend (FFmpegProgress) -> Unit, onProgress: suspend (Int) -> Unit): Int {
         lastCommandArgs = commandArgs
         onProgress(50)
         onProgress(100)
         return exitCodeToReturn
+    }
+
+    var analysisOutput = ""
+
+    override suspend fun executeForOutput(commandArgs: List<String>): FFmpegExecution {
+        lastCommandArgs = commandArgs
+        return FFmpegExecution(exitCodeToReturn, analysisOutput)
     }
 
     override fun cancel() {}
@@ -86,6 +93,7 @@ class VisualizerProcessorTest {
             ffmpegWrapper = object : DummyFFmpegWrapper() {
                 override suspend fun execute(
                     commandArgs: List<String>,
+                    onStatistics: suspend (FFmpegProgress) -> Unit,
                     onProgress: suspend (Int) -> Unit
                 ): Int {
                     lastCommandArgs = commandArgs

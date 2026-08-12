@@ -8,6 +8,8 @@ import com.example.core.command.UndoRedoState
 import com.example.core.ffmpeg.JobProgressState
 import com.example.core.ffmpeg.LoopDurationPlanner
 import com.example.core.ffmpeg.MediaProcessor
+import com.example.core.ffmpeg.RenderState
+import com.example.core.ffmpeg.ExportState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -34,6 +36,8 @@ data class LoopUiState(
     val durationMs: Long = 0L,
     val loopCount: Int = 0,
     val jobProgress: JobProgressState = JobProgressState(),
+    val renderState: RenderState = RenderState.Idle,
+    val exportState: ExportState = ExportState.Idle,
     val lastRenderedOutputUri: String? = null
 )
 
@@ -58,11 +62,20 @@ class LoopViewModel(
 
     init {
         viewModelScope.launch(Dispatchers.Default) {
+            mediaProcessor.renderState.collect { state ->
+                _uiState.update { current ->
+                    current.copy(
+                        renderState = state,
+                        lastRenderedOutputUri = if (state is RenderState.Success) state.outputPath else current.lastRenderedOutputUri
+                    )
+                }
+            }
+        }
+        viewModelScope.launch(Dispatchers.Default) {
             mediaProcessor.progressState.collect { progress ->
                 _uiState.update { current ->
                     current.copy(
-                        jobProgress = progress,
-                        lastRenderedOutputUri = if (progress.progress == 100) progress.outputFilePath else current.lastRenderedOutputUri
+                        jobProgress = progress
                     )
                 }
             }
@@ -270,5 +283,36 @@ class LoopViewModel(
 
     fun cancelRenderJob() {
         mediaProcessor.cancelActiveJob()
+    }
+
+    /**
+     * Copies the already-validated render output into the device gallery. This never
+     * re-invokes FFmpeg: the source of truth for the output path is RenderState.Success,
+     * not a re-render.
+     */
+    fun saveRenderToGallery() {
+        // Read directly from processor to bypass state-sync timing in tests
+        val renderState = mediaProcessor.renderState.value
+        if (renderState !is RenderState.Success) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(exportState = ExportState.Exporting) }
+            // exportProjectToGallery already switches to Dispatchers.IO internally
+            val result = mediaProcessor.exportProjectToGallery(
+                filePath = renderState.outputPath,
+                isAudio = false
+            )
+            result.onSuccess { uri ->
+                _uiState.update { it.copy(exportState = ExportState.Success(uri)) }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(exportState = ExportState.Failed(error.localizedMessage ?: "Export failed"))
+                }
+            }
+        }
+    }
+
+    fun dismissExportState() {
+        _uiState.update { it.copy(exportState = ExportState.Idle) }
     }
 }

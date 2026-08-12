@@ -51,6 +51,16 @@
         <service
             android:name="com.example.core.media.ProjectAutoSaveService"
             android:exported="false" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.render-files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/render_file_paths" />
+        </provider>
     </application>
 
 </manifest>

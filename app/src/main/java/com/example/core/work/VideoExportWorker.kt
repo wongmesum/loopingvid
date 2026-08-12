@@ -205,8 +205,45 @@ class VideoExportWorker(
             }
 
             progressCollectorJob.cancel()
+
+            // Processing returns its job entity even when validation rejected the output,
+            // so the status is the authority here, not the mere presence of a result.
+            if (resultJobEntity.status != "COMPLETED") {
+                projectLifecycleManager.markFailed(projectId)
+                return Result.failure(
+                    workDataOf(KEY_ERROR to "Render tidak lolos validasi output (${resultJobEntity.status})")
+                )
+            }
+
             projectLifecycleManager.markCompleted(projectId)
-            val galleryUri = Uri.parse(resultJobEntity.outputUri ?: "")
+
+            // The processing pipeline writes to app-private cache. Publishing to MediaStore
+            // is a separate, explicit step that copies the validated output. This is the
+            // background-queue equivalent of the interactive "Save to Gallery" button.
+            // Visualizer and Slideshow processors already publish internally, so skip here.
+            val outputPath = resultJobEntity.outputUri ?: ""
+            val galleryUri: Uri = if (normalizedJobType in listOf("VISUALIZER", "SLIDESHOW")) {
+                // Already exported inside the processor; outputUri is the gallery path.
+                Uri.parse(outputPath)
+            } else {
+                val isAudio = normalizedJobType == "MASTERING" &&
+                    format.lowercase() in listOf("mp3", "wav", "m4a", "aac", "flac", "ogg")
+                val galleryResult = mediaProcessor.exportProjectToGallery(
+                    filePath = outputPath,
+                    customTitle = title,
+                    isAudio = isAudio
+                )
+                // A cache path is not a gallery URI: reporting one as KEY_GALLERY_URI would
+                // hand the UI a location no other app can open.
+                galleryResult.getOrElse { error ->
+                    projectLifecycleManager.markFailed(projectId)
+                    return Result.failure(
+                        workDataOf(
+                            KEY_ERROR to (error.localizedMessage ?: "Gagal menyimpan hasil ke galeri")
+                        )
+                    )
+                }
+            }
 
             return Result.success(
                 workDataOf(
