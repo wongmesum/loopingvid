@@ -6,6 +6,7 @@ import 'package:loopingvid/core/services/file_picker_service.dart';
 import 'package:loopingvid/core/services/ffmpeg_service.dart';
 import 'package:loopingvid/core/database/database_helper.dart';
 import 'package:loopingvid/core/database/models.dart';
+import 'package:loopingvid/core/utils/responsive.dart';
 
 class EditorScreen extends StatefulWidget {
   const EditorScreen({super.key});
@@ -50,29 +51,30 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: r.screenPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildPreviewCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildMediaSourcesCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildTextOverlaysCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildSpectrumCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildQualityCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           if (_isExporting) _buildProgressCard(),
           if (!_isExporting) _buildExportButton(),
           if (_outputPath != null) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: r.sectionGap),
             _buildSuccessCard(),
           ],
           if (_errorMessage != null) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: r.sectionGap),
             _buildErrorCard(),
           ],
         ],
@@ -81,12 +83,13 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildPreviewCard() {
+    final r = context.responsive;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           Container(
-            height: 200,
+            height: r.previewHeight,
             color: Colors.black,
             child: _previewController != null &&
                     _previewController!.value.isInitialized
@@ -172,9 +175,10 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildMediaSourcesCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -226,9 +230,10 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildTextOverlaysCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -274,9 +279,10 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildSpectrumCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -323,9 +329,10 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildQualityCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: DropdownButtonFormField<String>(
           decoration: const InputDecoration(
             labelText: 'Output Quality',
@@ -346,9 +353,10 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildProgressCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           children: [
             LinearProgressIndicator(value: _exportProgress),
@@ -372,10 +380,14 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Widget _buildExportButton() {
-    return FilledButton.icon(
-      onPressed: _videoPath != null && !_isExporting ? _exportVideo : null,
-      icon: const Icon(Icons.movie_creation),
-      label: const Text('Export Composition'),
+    final r = context.responsive;
+    return SizedBox(
+      height: r.buttonHeight,
+      child: FilledButton.icon(
+        onPressed: _videoPath != null && !_isExporting ? _exportVideo : null,
+        icon: const Icon(Icons.movie_creation),
+        label: const Text('Export Composition'),
+      ),
     );
   }
 

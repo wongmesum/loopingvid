@@ -6,6 +6,7 @@ import 'package:loopingvid/core/services/file_picker_service.dart';
 import 'package:loopingvid/core/services/ffmpeg_service.dart';
 import 'package:loopingvid/core/database/database_helper.dart';
 import 'package:loopingvid/core/database/models.dart';
+import 'package:loopingvid/core/utils/responsive.dart';
 
 class MasteringScreen extends StatefulWidget {
   const MasteringScreen({super.key});
@@ -58,29 +59,30 @@ class _MasteringScreenState extends State<MasteringScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final r = context.responsive;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: r.screenPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildAudioSourceCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildPresetCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildEqualizerCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildDynamicsCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           _buildOutputCard(),
-          const SizedBox(height: 16),
+          SizedBox(height: r.sectionGap),
           if (_isProcessing) _buildProgressCard(),
           if (!_isProcessing) _buildExportButton(),
           if (_outputPath != null) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: r.sectionGap),
             _buildSuccessCard(),
           ],
           if (_errorMessage != null) ...[
-            const SizedBox(height: 16),
+            SizedBox(height: r.sectionGap),
             _buildErrorCard(),
           ],
         ],
@@ -89,9 +91,10 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildAudioSourceCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -188,9 +191,10 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildPresetCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -224,9 +228,10 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildEqualizerCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -279,9 +284,10 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildDynamicsCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -335,9 +341,10 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildOutputCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -366,9 +373,10 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildProgressCard() {
+    final r = context.responsive;
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: r.cardContentPadding,
         child: Column(
           children: [
             LinearProgressIndicator(value: _processProgress),
@@ -392,11 +400,15 @@ class _MasteringScreenState extends State<MasteringScreen> {
   }
 
   Widget _buildExportButton() {
-    return FilledButton.icon(
-      onPressed:
-          _selectedAudioPath != null && !_isProcessing ? _startMastering : null,
-      icon: const Icon(Icons.audiotrack),
-      label: const Text('Export Master'),
+    final r = context.responsive;
+    return SizedBox(
+      height: r.buttonHeight,
+      child: FilledButton.icon(
+        onPressed:
+            _selectedAudioPath != null && !_isProcessing ? _startMastering : null,
+        icon: const Icon(Icons.audiotrack),
+        label: const Text('Export Master'),
+      ),
     );
   }
 
