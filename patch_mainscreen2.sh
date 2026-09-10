@@ -1,3 +1,0 @@
-sed -i 's/import com.example.feature.about.SupportProjectScreen/import com.example.feature.about.SupportProjectScreen\nimport com.example.feature.about.PrivacyPolicyScreen/g' app/src/main/java/com/example/ui/navigation/MainScreen.kt
-
-sed -i 's/            composable(NavDestination.SupportProject.route) {/            composable(NavDestination.Privacy.route) {\n                PrivacyPolicyScreen(\n                    onNavigateBack = {\n                        navController.popBackStack()\n                    }\n                )\n            }\n            composable(NavDestination.SupportProject.route) {/g' app/src/main/java/com/example/ui/navigation/MainScreen.kt

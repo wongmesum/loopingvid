@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.core.database.LiveSessionEntity
 import com.example.core.database.LoopingVidRepository
 import com.example.core.media.SpectrumStyle
+import com.example.core.utils.RtmpUrlValidator
 import com.example.core.utils.StorageInfo
 import com.example.core.utils.StorageWatcher
 import com.example.core.utils.ThermalInfo
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlin.random.Random
 
 enum class LivePlatform {
     YOUTUBE, TIKTOK, CUSTOM_RTMP
@@ -56,14 +56,21 @@ data class LiveUiState(
     val streamStatus: StreamStatus = StreamStatus.OFFLINE,
     val currentLoopRound: Int = 1,
     val liveDurationSec: Long = 0,
-    val currentBitrateKbps: Int = 4500,
+    val currentBitrateKbps: Int = 0,
     val targetBitrateKbps: Int = 4500,
-    val bitrateHistory: List<Int> = listOf(4400, 4450, 4520, 4480, 4550, 4500, 4490, 4510, 4530, 4470, 4500),
-    val viewerCount: Int = 1840,
-    val peakViewerCount: Int = 2450,
-    val viewerHistory: List<Int> = listOf(1420, 1480, 1550, 1620, 1700, 1750, 1810, 1840, 1890, 1920, 1880, 1950, 2010, 2080, 2150),
-    val bandwidthMbps: Float = 9.8f,
-    val bandwidthHistoryMbps: List<Float> = listOf(8.2f, 8.5f, 9.1f, 8.8f, 9.4f, 9.2f, 8.7f, 9.5f, 9.8f, 9.3f, 9.6f, 10.1f, 9.7f, 10.4f, 9.9f),
+    // Bitrate history is populated from the engine's real onNewBitrate callbacks; starts empty.
+    val bitrateHistory: List<Int> = emptyList(),
+    val viewerCount: Int = 0,
+    val peakViewerCount: Int = 0,
+    val viewerHistory: List<Int> = emptyList(),
+    // True when viewerCount reflects a real platform API value (e.g. YouTube Data API).
+    val isViewerCountLive: Boolean = false,
+    // YouTube Data API credentials for real concurrent-viewer polling (user-supplied).
+    val youtubeApiKey: String = "",
+    val youtubeVideoId: String = "",
+    // Real upload bandwidth is derived from the engine's onNewBitrate; starts at 0/empty.
+    val bandwidthMbps: Float = 0f,
+    val bandwidthHistoryMbps: List<Float> = emptyList(),
     val showD3OverlayOnVideo: Boolean = true,
     val d3OverlayOpacity: Float = 0.85f,
     val d3OverlayTimeWindowSec: Int = 30,
@@ -71,12 +78,14 @@ data class LiveUiState(
     val droppedFrames: Int = 0,
     val totalFrames: Long = 0,
     val fps: Int = 60,
-    val latencyMs: Int = 120, // RTT
-    val rttHistory: List<Int> = listOf(118, 122, 119, 125, 121, 118, 120, 124, 122, 119),
-    val jitterMs: Int = 6,
-    val jitterHistory: List<Int> = listOf(4, 5, 8, 6, 5, 7, 6, 4, 6, 5),
-    val bufferHealthPct: Float = 98f,
-    val healthScorePct: Int = 98,
+    // RTT and jitter are not reported by the RTMP client, so they start empty/zero and are
+    // NOT fabricated. They remain 0 unless a real measurement source is integrated.
+    val latencyMs: Int = 0, // RTT (ms) - 0 = unknown
+    val rttHistory: List<Int> = emptyList(),
+    val jitterMs: Int = 0,
+    val jitterHistory: List<Int> = emptyList(),
+    val bufferHealthPct: Float = 0f,
+    val healthScorePct: Int = 0,
     val isBuffering: Boolean = false,
     val reconnectAttempt: Int = 0,
     val maxReconnectAttempts: Int = 5,
@@ -89,10 +98,14 @@ data class LiveUiState(
     val tickerSpeed: TickerSpeed = TickerSpeed.NORMAL,
     val tickerPosition: TickerPosition = TickerPosition.BOTTOM,
     val selectedTickerStyleIndex: Int = 0,
+    // One-time validation/failure message for "Start Live" (invalid RTMP URL, camera preview not
+    // ready, or the RTMP engine failing to start). Consumed by the global error dialog in
+    // MainScreen so the user actually sees why the stream did not start, instead of only the
+    // internal Live Log Viewer entry.
+    val validationError: String? = null,
     val showSpectrumOverlay: Boolean = true,
     val spectrumStyle: SpectrumStyle = SpectrumStyle.BARS,
     val autoStopMinutes: Int = 0, // 0 = continuous
-    val batteryPct: Int = 92,
     val thermalState: String = "Normal",
     val thermalInfo: ThermalInfo = ThermalInfo(),
     val videoSourceVolume: Float = 1.0f,
@@ -154,28 +167,9 @@ data class LiveUiState(
     val isBandwidthSufficient: Boolean = true,
     val bandwidthWarningMessage: String? = null,
     val dbSessionId: Long? = null,
-    val logs: List<LiveLogEvent> = listOf(
-        LiveLogEvent(
-            level = LiveLogLevel.INFO,
-            category = LiveLogCategory.ENCODER,
-            message = "Hardware AVC/H.264 video encoder initialized (1080p60 @ 4500 Kbps)"
-        ),
-        LiveLogEvent(
-            level = LiveLogLevel.SUCCESS,
-            category = LiveLogCategory.SYSTEM,
-            message = "Audio pipeline ready: Media3 ExoPlayer processor & 2-channel 48kHz AAC"
-        ),
-        LiveLogEvent(
-            level = LiveLogLevel.INFO,
-            category = LiveLogCategory.NETWORK,
-            message = "Available network bandwidth estimated at 12.0 Mbps capacity"
-        ),
-        LiveLogEvent(
-            level = LiveLogLevel.SUCCESS,
-            category = LiveLogCategory.HEALTH,
-            message = "Stream health telemetry OK: 0 dropped frames, thermal state Normal"
-        )
-    )
+    // Logs start empty and are populated with REAL events (RTMP connect, bitrate, errors)
+    // as they happen. No pre-seeded "hardware initialized" entries that never occurred.
+    val logs: List<LiveLogEvent> = emptyList()
 )
 
 class LiveViewModel(
@@ -187,7 +181,93 @@ class LiveViewModel(
 
     private var liveTimerJob: Job? = null
 
+    // Real RTMP broadcast engine (RootEncoder). Null until the live screen binds a preview surface.
+    private val rtmpManager = RtmpStreamManager()
+
+    // Whether a broadcast surface has been bound. When false we cannot push a real stream.
+    @Volatile
+    private var isStreamViewBound: Boolean = false
+
+    // Polls the platform API (currently YouTube) for real concurrent viewer counts.
+    private var viewerPollJob: Job? = null
+
+    /** Exposes the RTMP engine so the Composable preview can bind its OpenGlView. */
+    fun getRtmpManager(): RtmpStreamManager = rtmpManager
+
+    /** Called by the preview Composable once the OpenGlView surface is ready. */
+    fun onStreamViewBound() {
+        isStreamViewBound = true
+    }
+
+    /** Called by the preview Composable when the surface is destroyed (navigation away). */
+    fun onStreamViewUnbound() {
+        isStreamViewBound = false
+    }
+
+    /**
+     * Real RTMP engine callbacks. Runs on RootEncoder threads; state is pushed through the
+     * thread-safe MutableStateFlow and DB writes are marshalled onto viewModelScope.
+     */
+    private val rtmpListener = object : RtmpStreamManager.Listener {
+        override fun onConnectionStarted(url: String) {
+            addLog(LiveLogLevel.INFO, LiveLogCategory.RTMP, "RTMP connection started: opening socket to ingest server...")
+        }
+
+        override fun onConnectionSuccess() {
+            addLog(LiveLogLevel.SUCCESS, LiveLogCategory.RTMP, "RTMP connection established. Stream is LIVE.")
+            _uiState.value = _uiState.value.copy(
+                streamStatus = StreamStatus.LIVE,
+                isBuffering = false,
+                connectionLossReason = null,
+                reconnectAttempt = 0,
+                reconnectCountdownSec = 0
+            )
+            // Begin polling real viewer counts (YouTube) now that we are live.
+            startViewerCountPolling()
+        }
+
+        override fun onConnectionFailed(reason: String) {
+            addLog(LiveLogLevel.ERROR, LiveLogCategory.RTMP, "RTMP connection failed: $reason")
+            // Delegate to the reconnection handler which performs a real retry via the engine.
+            handleRealConnectionDrop(reason)
+        }
+
+        override fun onDisconnect() {
+            addLog(LiveLogLevel.WARN, LiveLogCategory.RTMP, "RTMP disconnected.")
+        }
+
+        override fun onAuthError() {
+            addLog(LiveLogLevel.ERROR, LiveLogCategory.RTMP, "RTMP authentication error. Check your stream key.")
+            _uiState.value = _uiState.value.copy(
+                streamStatus = StreamStatus.STOPPED,
+                isBuffering = false,
+                connectionLossReason = "Authentication error (invalid stream key)."
+            )
+            rtmpManager.stopStream()
+        }
+
+        override fun onAuthSuccess() {
+            addLog(LiveLogLevel.SUCCESS, LiveLogCategory.RTMP, "RTMP authentication successful.")
+        }
+
+        override fun onNewBitrate(bitrateBps: Long) {
+            // Convert bits/sec to Kbps and feed the real value into the UI/telemetry.
+            val kbps = (bitrateBps / 1000L).toInt().coerceAtLeast(0)
+            val history = (_uiState.value.bitrateHistory + kbps).takeLast(25)
+            _uiState.value = _uiState.value.copy(
+                currentBitrateKbps = kbps,
+                bitrateHistory = history,
+                bandwidthMbps = (kbps / 1000f).coerceIn(0f, 100f)
+            )
+        }
+    }
+
     init {
+        // Register the RTMP listener with the engine before anything else runs. Without this,
+        // real RootEncoder callbacks (onConnectionSuccess, onNewBitrate, onConnectionFailed, etc.)
+        // never reach the ViewModel, so streamStatus never becomes LIVE, bitrate history stays
+        // empty, and auto-reconnect never triggers even when the RTMP connection is genuinely up.
+        rtmpManager.setListener(rtmpListener)
         initializeLiveStreamViewModel()
     }
 
@@ -199,6 +279,15 @@ class LiveViewModel(
                     val savedKey = repository.getSettingValue("stream_key_youtube")
                     if (!savedKey.isNullOrBlank()) {
                         _uiState.value = _uiState.value.copy(streamKey = savedKey)
+                    }
+                    // Restore saved YouTube viewer-count credentials, if any.
+                    val savedYtApiKey = repository.getSettingValue("youtube_api_key")
+                    val savedYtVideoId = repository.getSettingValue("youtube_video_id")
+                    if (!savedYtApiKey.isNullOrBlank() || !savedYtVideoId.isNullOrBlank()) {
+                        _uiState.value = _uiState.value.copy(
+                            youtubeApiKey = savedYtApiKey ?: _uiState.value.youtubeApiKey,
+                            youtubeVideoId = savedYtVideoId ?: _uiState.value.youtubeVideoId
+                        )
                     }
                 } catch (e: Throwable) {
                     addLog(
@@ -284,6 +373,20 @@ class LiveViewModel(
         _uiState.value = _uiState.value.copy(streamKey = key)
         viewModelScope.launch {
             repository.setSetting("stream_key_${_uiState.value.platform.name.lowercase()}", key)
+        }
+    }
+
+    fun updateYoutubeApiKey(key: String) {
+        _uiState.value = _uiState.value.copy(youtubeApiKey = key)
+        viewModelScope.launch {
+            try { repository.setSetting("youtube_api_key", key) } catch (_: Throwable) {}
+        }
+    }
+
+    fun updateYoutubeVideoId(videoId: String) {
+        _uiState.value = _uiState.value.copy(youtubeVideoId = videoId)
+        viewModelScope.launch {
+            try { repository.setSetting("youtube_video_id", videoId) } catch (_: Throwable) {}
         }
     }
 
@@ -451,7 +554,10 @@ class LiveViewModel(
     }
 
     fun toggleMicInputMute() {
-        _uiState.value = _uiState.value.copy(isMicInputMuted = !_uiState.value.isMicInputMuted)
+        val newMuted = !_uiState.value.isMicInputMuted
+        _uiState.value = _uiState.value.copy(isMicInputMuted = newMuted)
+        // Reflect the change on the live audio track if streaming.
+        rtmpManager.setAudioMuted(newMuted || _uiState.value.isQuickMuted)
     }
 
     fun setBgMusicVolume(volume: Float) {
@@ -599,8 +705,15 @@ class LiveViewModel(
         _uiState.value = validateSimulcastBandwidth(updatedState)
     }
 
+    /**
+     * Generates a randomized bandwidth estimate for simulcast validation. This is intentionally
+     * NOT a real upload speed test - it performs no network probe. A genuine measurement would
+     * require uploading a payload to a server and timing it, which risks consuming the user's
+     * data/quota without explicit consent, so this stays a clearly-labeled simulation (see the
+     * "Simulate Speed" button text in BroadcastTargetsCard) rather than silently faking a real
+     * measurement.
+     */
     fun simulateBandwidthTest() {
-        // Simulates running an active speed test to evaluate upload capacity
         val simulatedCapacityKbps = (6000..18000).random()
         setAvailableBandwidth(simulatedCapacityKbps)
     }
@@ -608,30 +721,50 @@ class LiveViewModel(
     fun startLiveStream(context: Context) {
         try {
             val state = _uiState.value
-            if (state.sourceUri == null) {
+
+            // Validate the RTMP endpoint. For camera streaming the video source is the device
+            // camera bound to the preview surface, so a media source URI is not required.
+            val validation = RtmpUrlValidator.validateRtmpUrl(state.rtmpUrl)
+            if (!validation.isValid) {
                 addLog(
                     level = LiveLogLevel.WARN,
                     category = LiveLogCategory.RTMP,
-                    message = "Start live stream skipped: No video media source selected."
+                    message = "Start live stream skipped: invalid RTMP URL. ${validation.errorMessage ?: ""}"
+                )
+                _uiState.value = _uiState.value.copy(
+                    validationError = "RTMP URL tidak valid: ${validation.errorMessage ?: "Periksa kembali konfigurasi streaming."}"
                 )
                 return
             }
+
+            if (!isStreamViewBound) {
+                addLog(
+                    level = LiveLogLevel.WARN,
+                    category = LiveLogCategory.RTMP,
+                    message = "Start live stream skipped: camera preview is not ready yet. Grant camera/mic permission and wait for preview."
+                )
+                _uiState.value = _uiState.value.copy(
+                    validationError = "Kamera preview belum siap. Berikan izin kamera/mikrofon dan tunggu preview aktif."
+                )
+                return
+            }
+
+            // Compose the full ingest URL: server URL + stream key.
+            val fullUrl = buildFullRtmpUrl(state.rtmpUrl, state.streamKey)
 
             _uiState.value = state.copy(streamStatus = StreamStatus.CONNECTING)
 
             viewModelScope.launch {
                 try {
-                    delay(1200) // Simulated RTMP handshake
-
                     val session = LiveSessionEntity(
                         platform = state.platform.name,
                         streamTitle = state.streamTitle,
                         rtmpUrl = state.rtmpUrl,
-                        sourceUri = state.sourceUri,
+                        sourceUri = state.sourceUri ?: "",
                         durationSec = 0,
                         totalLoops = 1,
                         status = "ACTIVE",
-                        avgBitrateKbps = 4500,
+                        avgBitrateKbps = 0,
                         droppedFrames = 0
                     )
 
@@ -647,13 +780,12 @@ class LiveViewModel(
                     }
 
                     _uiState.value = _uiState.value.copy(
-                        streamStatus = StreamStatus.LIVE,
                         dbSessionId = sessionId,
                         liveDurationSec = 0,
                         currentLoopRound = 1
                     )
 
-                    // Start Foreground Service safely
+                    // Start the foreground service (camera|microphone) before pushing frames.
                     try {
                         val serviceIntent = Intent(context, LiveStreamService::class.java).apply {
                             putExtra(LiveStreamService.EXTRA_PLATFORM, state.platform.name)
@@ -672,6 +804,38 @@ class LiveViewModel(
                         )
                     }
 
+                    // Start the real RTMP broadcast. The status becomes LIVE only once the
+                    // engine reports onConnectionSuccess (handled by rtmpListener).
+                    val resolution = state.streamResolution
+                    val (w, h) = resolutionToSize(resolution)
+                    val started = rtmpManager.startStream(
+                        fullRtmpUrl = fullUrl,
+                        width = w,
+                        height = h,
+                        fps = state.fps.coerceIn(15, 60),
+                        videoBitrateBps = resolution.recommendedBitrateKbps * 1000
+                    )
+
+                    if (!started) {
+                        addLog(
+                            level = LiveLogLevel.ERROR,
+                            category = LiveLogCategory.RTMP,
+                            message = "Failed to start RTMP stream: camera/encoder initialization failed."
+                        )
+                        _uiState.value = _uiState.value.copy(
+                            streamStatus = StreamStatus.STOPPED,
+                            isBuffering = false,
+                            validationError = "Gagal memulai live stream: inisialisasi kamera/encoder gagal."
+                        )
+                        // Stop the service we just started since streaming didn't begin.
+                        try { context.stopService(Intent(context, LiveStreamService::class.java)) } catch (_: Throwable) {}
+                        return@launch
+                    }
+
+                    // Apply current mute state to the live audio track.
+                    rtmpManager.setAudioMuted(_uiState.value.isMicInputMuted || _uiState.value.isQuickMuted)
+
+                    // Begin the uptime/thermal/storage telemetry loop (real bitrate comes via callback).
                     startLiveTelemetryLoop(sessionId, context)
                 } catch (e: Throwable) {
                     addLog(
@@ -681,7 +845,8 @@ class LiveViewModel(
                     )
                     _uiState.value = _uiState.value.copy(
                         streamStatus = StreamStatus.STOPPED,
-                        isBuffering = false
+                        isBuffering = false,
+                        validationError = "Gagal memulai live stream: ${e.localizedMessage ?: "Kesalahan tidak diketahui."}"
                     )
                 }
             }
@@ -691,7 +856,157 @@ class LiveViewModel(
                 category = LiveLogCategory.SYSTEM,
                 message = "Live stream start launch error caught: ${e.localizedMessage}"
             )
-            _uiState.value = _uiState.value.copy(streamStatus = StreamStatus.STOPPED)
+            _uiState.value = _uiState.value.copy(
+                streamStatus = StreamStatus.STOPPED,
+                validationError = "Gagal memulai live stream: ${e.localizedMessage ?: "Kesalahan tidak diketahui."}"
+            )
+        }
+    }
+
+    /** Clears [LiveUiState.validationError] after the global error dialog has shown it. */
+    fun consumeValidationError() {
+        _uiState.value = _uiState.value.copy(validationError = null)
+    }
+
+    /** Builds the full RTMP ingest URL by appending the stream key to the server URL. */
+    private fun buildFullRtmpUrl(serverUrl: String, streamKey: String): String {
+        val trimmedUrl = serverUrl.trim().trimEnd('/')
+        val trimmedKey = streamKey.trim()
+        return if (trimmedKey.isEmpty()) trimmedUrl else "$trimmedUrl/$trimmedKey"
+    }
+
+    /** Maps a [StreamResolution] to concrete encoder width/height. */
+    private fun resolutionToSize(resolution: StreamResolution): Pair<Int, Int> {
+        return when (resolution) {
+            StreamResolution.RES_720P -> 1280 to 720
+            StreamResolution.RES_1080P -> 1920 to 1080
+            StreamResolution.RES_1440P -> 2560 to 1440
+            StreamResolution.RES_4K -> 3840 to 2160
+        }
+    }
+
+    /** Builds the viewer-count provider appropriate for the current platform/credentials. */
+    private fun buildViewerCountProvider(): ViewerCountProvider {
+        val state = _uiState.value
+        return if (state.platform == LivePlatform.YOUTUBE &&
+            state.youtubeApiKey.isNotBlank() &&
+            state.youtubeVideoId.isNotBlank()
+        ) {
+            YouTubeViewerCountProvider(state.youtubeApiKey.trim(), state.youtubeVideoId.trim())
+        } else {
+            // TikTok and custom RTMP have no public concurrent-viewer API.
+            NoOpViewerCountProvider
+        }
+    }
+
+    /**
+     * Polls the platform API for real concurrent viewers while the stream is live. Only
+     * updates the UI with values actually returned by the API; when unavailable the viewer
+     * figures stay at their honest placeholder (0 / not live).
+     */
+    private fun startViewerCountPolling() {
+        viewerPollJob?.cancel()
+        val provider = buildViewerCountProvider()
+        if (provider is NoOpViewerCountProvider) {
+            // No real source; make it explicit that the viewer count is not live data.
+            _uiState.value = _uiState.value.copy(isViewerCountLive = false)
+            return
+        }
+
+        viewerPollJob = viewModelScope.launch {
+            addLog(LiveLogLevel.INFO, LiveLogCategory.NETWORK, "Viewer count polling started (YouTube Data API).")
+            while (_uiState.value.streamStatus == StreamStatus.LIVE ||
+                _uiState.value.streamStatus == StreamStatus.RECONNECTING
+            ) {
+                val viewers = provider.getConcurrentViewers()
+                if (viewers != null) {
+                    val history = (_uiState.value.viewerHistory + viewers).takeLast(25)
+                    val peak = maxOf(_uiState.value.peakViewerCount, viewers)
+                    _uiState.value = _uiState.value.copy(
+                        viewerCount = viewers,
+                        peakViewerCount = peak,
+                        viewerHistory = history,
+                        isViewerCountLive = true
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(isViewerCountLive = false)
+                }
+                // Poll every 15s to respect API quota while staying reasonably fresh.
+                delay(15_000)
+            }
+        }
+    }
+
+    private fun stopViewerCountPolling() {
+        viewerPollJob?.cancel()
+        viewerPollJob = null
+    }
+
+    /**
+     * Handles a real RTMP connection drop reported by the engine. Marks the stream as
+     * reconnecting and attempts to restart the stream via the engine with backoff.
+     */
+    private fun handleRealConnectionDrop(reason: String) {
+        if (_uiState.value.streamStatus == StreamStatus.STOPPED) return
+
+        reconnectJob?.cancel()
+        _uiState.value = _uiState.value.copy(
+            streamStatus = StreamStatus.RECONNECTING,
+            isBuffering = true,
+            connectionLossReason = reason,
+            reconnectAttempt = 1,
+            reconnectCountdownSec = 3
+        )
+
+        reconnectJob = viewModelScope.launch {
+            val maxAttempts = _uiState.value.maxReconnectAttempts
+            var attempt = 1
+            while (attempt <= maxAttempts && _uiState.value.streamStatus == StreamStatus.RECONNECTING) {
+                _uiState.value = _uiState.value.copy(reconnectAttempt = attempt)
+                for (sec in 3 downTo 1) {
+                    if (_uiState.value.streamStatus != StreamStatus.RECONNECTING) return@launch
+                    _uiState.value = _uiState.value.copy(reconnectCountdownSec = sec)
+                    delay(1000)
+                }
+                addLog(
+                    level = LiveLogLevel.INFO,
+                    category = LiveLogCategory.NETWORK,
+                    message = "Reconnection attempt $attempt/$maxAttempts: restarting RTMP stream..."
+                )
+                try {
+                    rtmpManager.stopStream()
+                    val state = _uiState.value
+                    val (w, h) = resolutionToSize(state.streamResolution)
+                    val ok = rtmpManager.startStream(
+                        fullRtmpUrl = buildFullRtmpUrl(state.rtmpUrl, state.streamKey),
+                        width = w,
+                        height = h,
+                        fps = state.fps.coerceIn(15, 60),
+                        videoBitrateBps = state.streamResolution.recommendedBitrateKbps * 1000
+                    )
+                    // Success is confirmed asynchronously via onConnectionSuccess; give it a moment.
+                    if (ok) {
+                        delay(2500)
+                        if (_uiState.value.streamStatus == StreamStatus.LIVE) return@launch
+                    }
+                } catch (e: Throwable) {
+                    addLog(LiveLogLevel.WARN, LiveLogCategory.NETWORK, "Reconnect attempt failed: ${e.localizedMessage}")
+                }
+                attempt++
+            }
+            if (_uiState.value.streamStatus == StreamStatus.RECONNECTING) {
+                addLog(
+                    level = LiveLogLevel.ERROR,
+                    category = LiveLogCategory.NETWORK,
+                    message = "RECONNECTION FAILED: exceeded $maxAttempts attempts. Stream stopped."
+                )
+                _uiState.value = _uiState.value.copy(
+                    streamStatus = StreamStatus.STOPPED,
+                    isBuffering = false,
+                    connectionLossReason = "Max reconnection retries exceeded."
+                )
+                rtmpManager.stopStream()
+            }
         }
     }
 
@@ -700,23 +1015,27 @@ class LiveViewModel(
         liveTimerJob = viewModelScope.launch {
             var elapsed = 0L
             var loops = 1
-            var totalBitrateSum = 4500L
-            var accumulatedDroppedFrames = 0
+            var totalBitrateSum = 0L
+            val accumulatedDroppedFrames = 0
             var totalFramesSent = 0L
-            val random = Random(1234)
 
-            val bitrateList = mutableListOf(4400, 4450, 4520, 4480, 4550, 4500)
-            val rttList = mutableListOf(118, 122, 119, 125, 121)
-            val jitterList = mutableListOf(4, 5, 8, 6, 5)
-            val viewerHistoryList = _uiState.value.viewerHistory.toMutableList()
             val bandwidthHistoryList = _uiState.value.bandwidthHistoryMbps.toMutableList()
-            var currentViewerCount = _uiState.value.viewerCount
-            var peakViewerCount = _uiState.value.peakViewerCount
 
-            while (_uiState.value.streamStatus == StreamStatus.LIVE) {
+            // Run while the stream is connecting/live/reconnecting. Uptime only advances when LIVE.
+            while (_uiState.value.streamStatus == StreamStatus.LIVE ||
+                _uiState.value.streamStatus == StreamStatus.CONNECTING ||
+                _uiState.value.streamStatus == StreamStatus.RECONNECTING
+            ) {
                 delay(1000)
+
+                val isLiveNow = _uiState.value.streamStatus == StreamStatus.LIVE
+                if (!isLiveNow) {
+                    // While connecting/reconnecting, don't accumulate uptime or fake telemetry.
+                    continue
+                }
+
                 elapsed++
-                totalFramesSent += 60
+                totalFramesSent += _uiState.value.fps.toLong().coerceAtLeast(1L)
 
                 // Check Auto-Stop Timer Limit
                 val autoStopLimitMin = _uiState.value.autoStopMinutes
@@ -725,38 +1044,23 @@ class LiveViewModel(
                     break
                 }
 
-                // Every 30 seconds simulate seamless video loop completion
+                // Every 30 seconds mark a seamless loop round completion.
                 if (elapsed % 30L == 0L) {
                     loops++
                 }
 
-                val currentBitrate = 4200 + random.nextInt(750)
-                totalBitrateSum += currentBitrate
-                val avgBitrate = (totalBitrateSum / elapsed).toInt()
+                // Real bitrate is supplied by the engine via onNewBitrate; derive health from it.
+                val currentBitrate = _uiState.value.currentBitrateKbps
+                if (currentBitrate > 0) totalBitrateSum += currentBitrate
+                val avgBitrate = if (elapsed > 0) (totalBitrateSum / elapsed).toInt() else currentBitrate
 
-                val currentRtt = 110 + random.nextInt(25)
-                val currentJitter = 3 + random.nextInt(7)
-
-                // Occasional minor dropped frame simulation under jitter peaks
-                if (currentJitter > 8 && random.nextInt(10) > 6) {
-                    accumulatedDroppedFrames += random.nextInt(3) + 1
-                }
-
-                // Rolling history windows (max 25 entries)
-                bitrateList.add(currentBitrate)
-                if (bitrateList.size > 25) bitrateList.removeAt(0)
-
-                rttList.add(currentRtt)
-                if (rttList.size > 25) rttList.removeAt(0)
-
-                jitterList.add(currentJitter)
-                if (jitterList.size > 25) jitterList.removeAt(0)
-
-                val droppedPct = if (totalFramesSent > 0) (accumulatedDroppedFrames.toFloat() / totalFramesSent) * 100f else 0f
+                // A sustained bitrate far below target indicates network trouble -> health proxy.
+                val targetKbps = _uiState.value.streamResolution.recommendedBitrateKbps
+                val bitrateRatio = if (targetKbps > 0) currentBitrate.toFloat() / targetKbps else 1f
                 val healthScore = when {
-                    droppedPct > 2.0f -> 75
-                    droppedPct > 0.5f -> 88
-                    currentRtt > 150 -> 90
+                    currentBitrate == 0 -> 60
+                    bitrateRatio < 0.4f -> 72
+                    bitrateRatio < 0.7f -> 86
                     else -> 98
                 }
 
@@ -774,55 +1078,44 @@ class LiveViewModel(
                     _uiState.value.storageInfo
                 }
 
-                // Audio Mixer VU Peak Level Calculations
+                // Audio Mixer level indicators. RootEncoder does not expose per-channel PCM
+                // metering, so instead of fabricating random peaks we reflect the user's actual
+                // fader/mute settings deterministically: a muted channel reads 0, otherwise the
+                // configured volume (with mic ducking applied). This is an honest level display,
+                // not a fake animated meter.
                 val masterFactor = if (_uiState.value.isMasterMuted) 0f else _uiState.value.masterVolume
                 val videoPeak = if (!_uiState.value.isVideoSourceMuted) {
-                    (_uiState.value.videoSourceVolume * (0.65f + random.nextFloat() * 0.30f)).coerceIn(0f, 1f)
+                    _uiState.value.videoSourceVolume.coerceIn(0f, 1f)
                 } else 0f
 
                 val micPeak = if (!_uiState.value.isMicInputMuted) {
-                    (_uiState.value.micInputVolume * (0.40f + random.nextFloat() * 0.50f)).coerceIn(0f, 1f)
+                    _uiState.value.micInputVolume.coerceIn(0f, 1f)
                 } else 0f
 
                 val duckingFactor = if (_uiState.value.isMicDuckingEnabled && micPeak > 0.35f) 0.35f else 1.0f
                 val bgPeak = if (!_uiState.value.isBgMusicMuted && _uiState.value.bgMusicTrack != "None") {
-                    (_uiState.value.bgMusicVolume * duckingFactor * (0.50f + random.nextFloat() * 0.30f)).coerceIn(0f, 1f)
+                    (_uiState.value.bgMusicVolume * duckingFactor).coerceIn(0f, 1f)
                 } else 0f
 
                 val masterPeak = (((videoPeak * 0.5f) + (micPeak * 0.6f) + (bgPeak * 0.4f)) * masterFactor).coerceIn(0f, 1f)
 
-                // Live Viewer Count & Bandwidth Fluctuation Simulation
-                val viewerChange = random.nextInt(25) - 10
-                currentViewerCount = (currentViewerCount + viewerChange).coerceIn(100, 50000)
-                if (currentViewerCount > peakViewerCount) {
-                    peakViewerCount = currentViewerCount
-                }
-                viewerHistoryList.add(currentViewerCount)
-                if (viewerHistoryList.size > 25) viewerHistoryList.removeAt(0)
-
-                val currentBandwidthMbps = (currentBitrate / 1000f) + (random.nextFloat() * 1.2f - 0.6f)
-                val clampedBandwidthMbps = currentBandwidthMbps.coerceIn(1.0f, 25.0f)
-                bandwidthHistoryList.add(clampedBandwidthMbps)
+                // Bandwidth history tracks the real upload bitrate reported by the engine.
+                val currentBandwidthMbps = (currentBitrate / 1000f).coerceIn(0f, 100f)
+                bandwidthHistoryList.add(currentBandwidthMbps)
                 if (bandwidthHistoryList.size > 25) bandwidthHistoryList.removeAt(0)
+
+                // NOTE: Viewer counts are not available from the RTMP protocol itself; real values
+                // require each platform's data API (e.g. YouTube/TikTok). Until integrated, the
+                // viewer figures remain a placeholder and are intentionally not fabricated here.
 
                 _uiState.value = _uiState.value.copy(
                     liveDurationSec = elapsed,
                     currentLoopRound = loops,
-                    currentBitrateKbps = currentBitrate,
-                    bitrateHistory = bitrateList.toList(),
-                    viewerCount = currentViewerCount,
-                    peakViewerCount = peakViewerCount,
-                    viewerHistory = viewerHistoryList.toList(),
-                    bandwidthMbps = clampedBandwidthMbps,
                     bandwidthHistoryMbps = bandwidthHistoryList.toList(),
-                    latencyMs = currentRtt,
-                    rttHistory = rttList.toList(),
-                    jitterMs = currentJitter,
-                    jitterHistory = jitterList.toList(),
                     droppedFrames = accumulatedDroppedFrames,
                     totalFrames = totalFramesSent,
                     healthScorePct = healthScore,
-                    bufferHealthPct = (95f + random.nextFloat() * 4f).coerceAtMost(100f),
+                    bufferHealthPct = if (currentBitrate > 0) 98f else 70f,
                     thermalState = thermalInfo.level.label,
                     thermalInfo = thermalInfo,
                     storageInfo = currentStorageInfo,
@@ -854,119 +1147,13 @@ class LiveViewModel(
     private var reconnectJob: Job? = null
 
     /**
-     * Handles network loss during stream transmission without crashing the application.
-     * Transitions state to RECONNECTING with isBuffering = true, and executes exponential backoff retries.
+     * Handles a network loss on the live stream. Delegates to [handleRealConnectionDrop], which
+     * performs a genuine RTMP stream restart via the engine with backoff (no fake handshake or
+     * random "reconnected" outcome). Used both by real disconnect callbacks and the manual retry.
      */
     fun handleNetworkLoss(reason: String = "Network socket reset / packet drop", context: Context? = null) {
         if (_uiState.value.streamStatus != StreamStatus.LIVE && _uiState.value.streamStatus != StreamStatus.RECONNECTING) return
-
-        reconnectJob?.cancel()
-
-        addLog(
-            level = LiveLogLevel.WARN,
-            category = LiveLogCategory.NETWORK,
-            message = "NETWORK CONNECTION LOSS: $reason. Triggering buffering & auto-reconnection sequence..."
-        )
-
-        _uiState.value = _uiState.value.copy(
-            streamStatus = StreamStatus.RECONNECTING,
-            isBuffering = true,
-            connectionLossReason = reason,
-            reconnectAttempt = 1,
-            reconnectCountdownSec = 3,
-            bufferHealthPct = 15f
-        )
-
-        reconnectJob = viewModelScope.launch {
-            try {
-                val maxAttempts = _uiState.value.maxReconnectAttempts
-                var attempt = 1
-
-                while (attempt <= maxAttempts && _uiState.value.streamStatus == StreamStatus.RECONNECTING) {
-                    _uiState.value = _uiState.value.copy(
-                        reconnectAttempt = attempt,
-                        isBuffering = true
-                    )
-
-                    // Countdown before retry attempt
-                    for (sec in 3 downTo 1) {
-                        if (_uiState.value.streamStatus != StreamStatus.RECONNECTING) break
-                        _uiState.value = _uiState.value.copy(reconnectCountdownSec = sec)
-                        delay(1000)
-                    }
-
-                    if (_uiState.value.streamStatus != StreamStatus.RECONNECTING) break
-
-                    addLog(
-                        level = LiveLogLevel.INFO,
-                        category = LiveLogCategory.NETWORK,
-                        message = "Reconnection attempt $attempt/$maxAttempts in progress: Re-negotiating RTMP TCP handshake & socket stream..."
-                    )
-
-                    // Simulate/Perform RTMP Handshake retry safely
-                    delay(1200)
-
-                    // Success on retry
-                    val isReconnected = (attempt >= 2) || (Random.nextFloat() > 0.3f)
-
-                    if (isReconnected) {
-                        addLog(
-                            level = LiveLogLevel.SUCCESS,
-                            category = LiveLogCategory.NETWORK,
-                            message = "RECONNECTION SUCCESSFUL! RTMP socket re-established. Resuming live stream transmission."
-                        )
-
-                        val currentSessionId = _uiState.value.dbSessionId
-                        _uiState.value = _uiState.value.copy(
-                            streamStatus = StreamStatus.LIVE,
-                            isBuffering = false,
-                            connectionLossReason = null,
-                            reconnectAttempt = 0,
-                            reconnectCountdownSec = 0,
-                            bufferHealthPct = 98f,
-                            healthScorePct = 95
-                        )
-
-                        // Resume telemetry loop if needed
-                        if (currentSessionId != null && context != null && (liveTimerJob == null || liveTimerJob?.isActive != true)) {
-                            startLiveTelemetryLoop(currentSessionId, context)
-                        }
-                        return@launch
-                    } else {
-                        addLog(
-                            level = LiveLogLevel.WARN,
-                            category = LiveLogCategory.NETWORK,
-                            message = "Reconnection attempt $attempt/$maxAttempts failed (Ingest timeout). Retrying..."
-                        )
-                        attempt++
-                    }
-                }
-
-                // If max attempts exhausted
-                if (_uiState.value.streamStatus == StreamStatus.RECONNECTING) {
-                    addLog(
-                        level = LiveLogLevel.ERROR,
-                        category = LiveLogCategory.NETWORK,
-                        message = "RECONNECTION FAILED: Exceeded maximum retry attempts ($maxAttempts). Stream stopped safely to avoid socket leak."
-                    )
-                    _uiState.value = _uiState.value.copy(
-                        streamStatus = StreamStatus.STOPPED,
-                        isBuffering = false,
-                        connectionLossReason = "Max reconnection retries exceeded."
-                    )
-                }
-            } catch (e: Throwable) {
-                addLog(
-                    level = LiveLogLevel.ERROR,
-                    category = LiveLogCategory.SYSTEM,
-                    message = "Handled error in reconnection loop safely: ${e.localizedMessage}"
-                )
-                _uiState.value = _uiState.value.copy(
-                    streamStatus = StreamStatus.STOPPED,
-                    isBuffering = false
-                )
-            }
-        }
+        handleRealConnectionDrop(reason)
     }
 
     /**
@@ -1020,6 +1207,15 @@ class LiveViewModel(
                 )
             }
 
+            // Stop the real RTMP broadcast engine.
+            try {
+                rtmpManager.stopStream()
+            } catch (e: Throwable) {
+                addLog(LiveLogLevel.WARN, LiveLogCategory.RTMP, "Stop stream handled safely: ${e.localizedMessage}")
+            }
+
+            stopViewerCountPolling()
+
             _uiState.value = _uiState.value.copy(streamStatus = StreamStatus.STOPPED)
 
             // Stop Foreground Service
@@ -1029,12 +1225,54 @@ class LiveViewModel(
     }
 
     /**
-     * Reduces encoder load to cool down device when thermal warning triggers.
+     * Applies torch/mic/camera controls to the real engine. Called by the UI toggles so the
+     * live stream reflects them immediately.
+     */
+    fun applyTorchToEngine(enabled: Boolean) {
+        rtmpManager.setTorch(enabled)
+    }
+
+    fun switchStreamCamera() {
+        rtmpManager.switchCamera()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        liveTimerJob?.cancel()
+        reconnectJob?.cancel()
+        viewerPollJob?.cancel()
+        try {
+            rtmpManager.release()
+        } catch (_: Throwable) {}
+    }
+
+    /**
+     * Reduces encoder load to cool down device when thermal warning triggers. Applies the lower
+     * bitrate to the RUNNING RTMP stream via [RtmpStreamManager.setVideoBitrateOnFly] (previously
+     * this only rewrote [LiveUiState.targetBitrateKbps]/[LiveUiState.currentBitrateKbps] without
+     * ever calling that real API, so the encoder kept running at its original bitrate despite the
+     * UI showing a lower number).
+     *
+     * Note: [LiveUiState.fps] is only read once at [startStream]'s initial encoder setup - RootEncoder
+     * has no on-the-fly frame-rate API, so lowering `fps` here cannot affect the already-running
+     * encoder. It's kept as a hint that only takes effect the next time streaming is (re)started.
      */
     fun coolDownEncoding() {
         val currentBitrate = _uiState.value.targetBitrateKbps
         val lowerBitrate = (currentBitrate * 0.70f).toInt().coerceAtLeast(1500)
         val lowerFps = if (_uiState.value.fps > 30) 30 else 15
+
+        if (_uiState.value.streamStatus == StreamStatus.LIVE) {
+            try {
+                rtmpManager.setVideoBitrateOnFly(lowerBitrate * 1000)
+            } catch (e: Throwable) {
+                addLog(
+                    level = LiveLogLevel.WARN,
+                    category = LiveLogCategory.ENCODER,
+                    message = "Cool-down bitrate change failed to apply to the live encoder: ${e.localizedMessage}"
+                )
+            }
+        }
 
         _uiState.value = _uiState.value.copy(
             targetBitrateKbps = lowerBitrate,

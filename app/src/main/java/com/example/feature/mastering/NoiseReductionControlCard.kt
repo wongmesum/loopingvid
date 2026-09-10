@@ -21,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.VolumeDown
-import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -65,8 +63,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.media.NoiseReductionConfig
 import com.example.core.media.NoiseReductionEngine
+import com.example.ui.theme.ElegantGoldDim
+import com.example.ui.theme.StudioLiveRed
+import com.example.ui.theme.StudioSuccessGreen
 import kotlinx.coroutines.isActive
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun NoiseReductionControlCard(
     config: NoiseReductionConfig,
@@ -143,7 +145,7 @@ fun NoiseReductionControlCard(
                     checked = config.isEnabled,
                     onCheckedChange = onToggleEnabled,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                         checkedTrackColor = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier.testTag("noise_reduction_switch")
@@ -153,7 +155,7 @@ fun NoiseReductionControlCard(
             // Live Spectral Hiss Visualizer Canvas
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Column(
@@ -169,39 +171,39 @@ fun NoiseReductionControlCard(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Column {
-                                Text("ESTIMATED HISS", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold), color = Color.Gray)
+                                Text("ESTIMATED HISS", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text(
                                     text = "%.1f dB".format(analysis.detectedHissLevelDb),
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = if (analysis.detectedHissLevelDb > -40f) Color(0xFFEF4444) else Color(0xFFF59E0B)
+                                    color = if (analysis.detectedHissLevelDb > -40f) MaterialTheme.colorScheme.error else ElegantGoldDim
                                 )
                             }
                             Column {
-                                Text("FFT SUPPRESSION", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold), color = Color.Gray)
+                                Text("FFT SUPPRESSION", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text(
                                     text = if (config.isEnabled) "-%.1f dB".format(config.reductionDb) else "OFF",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = if (config.isEnabled) Color(0xFF10B981) else Color.Gray
+                                    color = if (config.isEnabled) StudioSuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Column {
-                                Text("WINDOW", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold), color = Color.Gray)
+                                Text("WINDOW", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text(
                                     text = "${config.fftSize} pts",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color(0xFF38BDF8)
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
 
                         Surface(
-                            color = if (config.isEnabled) Color(0xFF064E3B) else Color(0xFF1E293B),
+                            color = if (config.isEnabled) StudioSuccessGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
                                 text = if (config.isEnabled) "ACTIVE FILTER" else "BYPASS",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
-                                color = if (config.isEnabled) Color(0xFF34D399) else Color.Gray,
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = if (config.isEnabled) StudioSuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
@@ -303,26 +305,26 @@ fun NoiseReductionControlCard(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF34D399)))
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(StudioSuccessGreen))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Clean Audio", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text("Clean Audio", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFF87171)))
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(StudioLiveRed))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Raw Hiss Noise", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text("Raw Hiss Noise", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFFF59E0B)))
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(ElegantGoldDim))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Noise Floor", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text("Noise Floor", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
 
                         Text(
                             text = "FFT Spectral Subtraction",
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-                            color = Color.Gray
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
 
@@ -340,10 +342,12 @@ fun NoiseReductionControlCard(
 
             AnimatedVisibility(visible = config.isEnabled) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    // Preset Quick Action Buttons
-                    Row(
+                    // Preset Quick Action Buttons. FlowRow so the 3 longer labels ("Medium
+                    // Static", "High Fan/AC") wrap onto a second line on narrow screens.
+                    androidx.compose.foundation.layout.FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         listOf(
                             "Mild Hiss" to (8f to -50f),
@@ -358,7 +362,14 @@ fun NoiseReductionControlCard(
                                     onReductionDbChanged(redDb)
                                     onNoiseFloorDbChanged(floorDb)
                                 },
-                                label = { Text(label, fontSize = 11.sp) },
+                                label = {
+                                    Text(
+                                        label,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                                     selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -430,24 +441,37 @@ fun NoiseReductionControlCard(
                         )
                     }
 
-                    // FFT Window Size Selection
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    // FFT Window Size Selection. Stacked (label above chips, not side-by-side)
+                    // so the 4 size chips have the full card width to wrap into on narrow phone
+                    // screens instead of being squeezed next to the label.
+                    //
+                    // IMPORTANT: this only changes the resolution of the live preview visualizer's
+                    // spectral analysis (NoiseReductionEngine.analyzeSpectralHiss). FFmpeg's actual
+                    // export-time noise filter (`afftdn`) has no window-size parameter to receive
+                    // this value, so it intentionally does NOT affect the exported file's noise
+                    // reduction - the label below makes that explicit instead of silently implying
+                    // it changes export quality.
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            text = "FFT Window Size",
+                            text = "FFT Window Size (Preview Only)",
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        Text(
+                            text = "Changes the live hiss visualizer's analysis resolution. Does not affect the exported audio.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
 
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        androidx.compose.foundation.layout.FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
                             listOf(256, 512, 1024, 2048).forEach { size ->
                                 FilterChip(
                                     selected = config.fftSize == size,
                                     onClick = { onFftSizeChanged(size) },
-                                    label = { Text("$size", fontSize = 11.sp) },
+                                    label = { Text("$size", style = MaterialTheme.typography.labelMedium) },
                                     modifier = Modifier.testTag("fft_size_$size")
                                 )
                             }
@@ -471,7 +495,7 @@ fun RealtimeGainStagingPeakMeter(
         modifier = modifier
             .fillMaxWidth()
             .testTag("realtime_peak_meter"),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF030712)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background),
         shape = RoundedCornerShape(10.dp)
     ) {
         Column(
@@ -497,7 +521,7 @@ fun RealtimeGainStagingPeakMeter(
                     Text(
                         text = "Gain Staging Peak Meter",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
@@ -519,7 +543,7 @@ fun RealtimeGainStagingPeakMeter(
                 ) {
                     Text(
                         text = statusText,
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 9.sp),
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = statusColor,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
@@ -557,8 +581,8 @@ fun RealtimeGainStagingPeakMeter(
             ) {
                 Text(
                     text = "DELTA: -%.1f dB".format(if (isEnabled) analysis.gainReductionDb else 0.0f),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
-                    color = if (isEnabled && analysis.gainReductionDb > 0.1f) theme.meterSafeColor else Color.Gray
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = if (isEnabled && analysis.gainReductionDb > 0.1f) theme.meterSafeColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 // dB Tick Marks
@@ -566,8 +590,8 @@ fun RealtimeGainStagingPeakMeter(
                     listOf("-60", "-30", "-12", "-6", "0 dB").forEach { tick ->
                         Text(
                             text = tick,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
-                            color = Color.Gray
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -595,8 +619,8 @@ private fun PeakMeterBar(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
-            color = Color.LightGray,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(88.dp)
         )
 
@@ -605,7 +629,7 @@ private fun PeakMeterBar(
                 .weight(1f)
                 .height(16.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(Color(0xFF1E293B))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val w = size.width
@@ -701,8 +725,8 @@ private fun PeakMeterBar(
 
         Text(
             text = "%.1f".format(peakDb),
-            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
-            color = if (peakDb > -3f) theme.meterClipColor else Color.White,
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+            color = if (peakDb > -3f) theme.meterClipColor else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.width(38.dp)
         )
     }

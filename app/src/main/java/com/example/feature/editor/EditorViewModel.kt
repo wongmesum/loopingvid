@@ -14,7 +14,6 @@ import com.example.core.media.ColorFilterPreset
 import com.example.core.media.ColorGradingConfig
 import com.example.core.media.EditorAutoSaveManager
 import com.example.core.media.LoopedSegmentConfig
-import com.example.core.media.Media3SpectrumAudioProcessor
 import com.example.core.media.ProjectTemplate
 import com.example.core.media.SegmentTransitionConfig
 import com.example.core.media.SpectrumStyle
@@ -26,7 +25,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.math.sin
 
 data class EditorUiState(
     val selectedMediaUri: String? = null,
@@ -42,14 +40,6 @@ data class EditorUiState(
     val spectrumStyle: SpectrumStyle = SpectrumStyle.BARS,
     val presetQuality: String = "1080p",
     val isPreviewPlaying: Boolean = true,
-    val visualizerMode: VisualizerMode = VisualizerMode.FFT_BARS,
-    val selectedPalette: SpectrumPalette = SPECTRUM_PALETTES[0],
-    val spectrumSensitivityGain: Float = 1.2f,
-    val spectrumBandCount: Int = 32,
-    val spectrumMagnitudes: FloatArray = FloatArray(32) { (sin(it.toDouble() * 0.4) * 0.4 + 0.5).toFloat() },
-    val spectrumPeakDb: Float = -8.5f,
-    val spectrumRmsEnergy: Float = 0.38f,
-    val spectrumDominantFreqHz: Int = 420,
     val colorGradingConfig: ColorGradingConfig = ColorGradingConfig(),
     val customColorPresets: List<com.example.core.media.CustomColorGradingPreset> = emptyList(),
     val transitionConfig: SegmentTransitionConfig = SegmentTransitionConfig(),
@@ -67,7 +57,11 @@ data class EditorUiState(
     val showRecoveryBanner: Boolean = false,
     val trimStartSec: Double = 0.0,
     val trimEndSec: Double = 0.0,
-    val aiGeneratedCaptions: String = ""
+    val aiGeneratedCaptions: String = "",
+    val metadata: com.example.core.media.AudioMetadata = com.example.core.media.AudioMetadata(),
+    // One-time validation error (e.g. "Export" tapped with no video selected). Consumed by the
+    // global error dialog in MainScreen.
+    val validationError: String? = null
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -88,14 +82,6 @@ data class EditorUiState(
         if (spectrumStyle != other.spectrumStyle) return false
         if (presetQuality != other.presetQuality) return false
         if (isPreviewPlaying != other.isPreviewPlaying) return false
-        if (visualizerMode != other.visualizerMode) return false
-        if (selectedPalette != other.selectedPalette) return false
-        if (spectrumSensitivityGain != other.spectrumSensitivityGain) return false
-        if (spectrumBandCount != other.spectrumBandCount) return false
-        if (!spectrumMagnitudes.contentEquals(other.spectrumMagnitudes)) return false
-        if (spectrumPeakDb != other.spectrumPeakDb) return false
-        if (spectrumRmsEnergy != other.spectrumRmsEnergy) return false
-        if (spectrumDominantFreqHz != other.spectrumDominantFreqHz) return false
         if (colorGradingConfig != other.colorGradingConfig) return false
         if (customColorPresets != other.customColorPresets) return false
         if (transitionConfig != other.transitionConfig) return false
@@ -114,6 +100,7 @@ data class EditorUiState(
         if (trimStartSec != other.trimStartSec) return false
         if (trimEndSec != other.trimEndSec) return false
         if (aiGeneratedCaptions != other.aiGeneratedCaptions) return false
+        if (validationError != other.validationError) return false
 
         return true
     }
@@ -132,14 +119,6 @@ data class EditorUiState(
         result = 31 * result + spectrumStyle.hashCode()
         result = 31 * result + presetQuality.hashCode()
         result = 31 * result + isPreviewPlaying.hashCode()
-        result = 31 * result + visualizerMode.hashCode()
-        result = 31 * result + selectedPalette.hashCode()
-        result = 31 * result + spectrumSensitivityGain.hashCode()
-        result = 31 * result + spectrumBandCount.hashCode()
-        result = 31 * result + spectrumMagnitudes.contentHashCode()
-        result = 31 * result + spectrumPeakDb.hashCode()
-        result = 31 * result + spectrumRmsEnergy.hashCode()
-        result = 31 * result + spectrumDominantFreqHz.hashCode()
         result = 31 * result + colorGradingConfig.hashCode()
         result = 31 * result + customColorPresets.hashCode()
         result = 31 * result + transitionConfig.hashCode()
@@ -158,6 +137,7 @@ data class EditorUiState(
         result = 31 * result + trimStartSec.hashCode()
         result = 31 * result + trimEndSec.hashCode()
         result = 31 * result + aiGeneratedCaptions.hashCode()
+        result = 31 * result + (validationError?.hashCode() ?: 0)
         return result
     }
 }
@@ -184,8 +164,6 @@ class EditorViewModel(
         override fun undo() = onUndo()
     }
 
-    private val spectrumProcessor = Media3SpectrumAudioProcessor()
-
     init {
         viewModelScope.launch(Dispatchers.Default) {
             mediaProcessor.progressState.collect { progress ->
@@ -198,11 +176,6 @@ class EditorViewModel(
             }
         }
 
-        spectrumProcessor.onSpectrumDataListener = { magnitudes, peakDb, rms ->
-            updateSpectrumData(magnitudes, peakDb, rms)
-        }
-
-        startRealtimeSpectrumAnimation()
         checkAutoSaveSessionOnStartup()
         startAutoSaveLoop()
     }
@@ -211,61 +184,9 @@ class EditorViewModel(
     fun redo() { undoRedoManager.redo() }
     fun clearHistory() { undoRedoManager.clear() }
 
-    private fun startRealtimeSpectrumAnimation() {
-        viewModelScope.launch(Dispatchers.Default) {
-            var phase = 0f
-            while (true) {
-                val state = _uiState.value
-                val isProcessing = state.jobProgress.isProcessing
-                delay(if (isProcessing) 500L else 200L)
-                if (state.isPreviewPlaying) {
-                    phase += 0.15f
-                    val count = state.spectrumBandCount
-                    val gain = state.spectrumSensitivityGain
-                    val simulated = FloatArray(count) { i ->
-                        val base = (sin(phase + i * 0.3) * 0.4 + 0.5).toFloat()
-                        val noise = (Math.random() * 0.15).toFloat()
-                        (base * gain + noise).coerceIn(0.05f, 1.0f)
-                    }
-                    val currentPeak = (-12f + (sin(phase * 1.2f) * 6f)).coerceIn(-60f, 0f)
-                    val currentRms = (0.35f + (sin(phase * 0.8f) * 0.15f)).coerceIn(0f, 1f)
-                    val dominantHz = (100 + (sin(phase * 0.5f) * 800 + 800)).toInt()
-
-                    _uiState.update { current ->
-                        current.copy(
-                            spectrumMagnitudes = simulated,
-                            spectrumPeakDb = currentPeak,
-                            spectrumRmsEnergy = currentRms,
-                            spectrumDominantFreqHz = dominantHz
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    fun setVisualizerMode(mode: VisualizerMode) {
-        val oldVal = _uiState.value.visualizerMode
-        if (oldVal == mode) return
-        undoRedoManager.executeCommand(
-            EditorCommand(
-                actionName = "Visualizer Mode (${mode.name})",
-                onExecute = { _uiState.value = _uiState.value.copy(visualizerMode = mode) },
-                onUndo = { _uiState.value = _uiState.value.copy(visualizerMode = oldVal) }
-            )
-        )
-    }
-
-    fun setSpectrumPalette(palette: SpectrumPalette) {
-        val oldVal = _uiState.value.selectedPalette
-        if (oldVal == palette) return
-        undoRedoManager.executeCommand(
-            EditorCommand(
-                actionName = "Palette (${palette.name})",
-                onExecute = { _uiState.value = _uiState.value.copy(selectedPalette = palette) },
-                onUndo = { _uiState.value = _uiState.value.copy(selectedPalette = oldVal) }
-            )
-        )
+    /** Clears [EditorUiState.validationError] after the global error dialog has shown it. */
+    fun consumeValidationError() {
+        _uiState.value = _uiState.value.copy(validationError = null)
     }
 
     private var sliderStartTrim: Pair<Double, Double>? = null
@@ -295,58 +216,6 @@ class EditorViewModel(
 
     fun setTrim(startSec: Double, endSec: Double) {
         commitTrimChange(startSec, endSec)
-    }
-
-    fun setSpectrumSensitivity(gain: Float) {
-        val oldVal = _uiState.value.spectrumSensitivityGain
-        if (oldVal == gain) return
-        undoRedoManager.executeCommand(
-            EditorCommand(
-                actionName = "Audio Gain (%.1fx)".format(gain),
-                onExecute = {
-                    spectrumProcessor.sensitivityGain = gain
-                    _uiState.value = _uiState.value.copy(spectrumSensitivityGain = gain)
-                },
-                onUndo = {
-                    spectrumProcessor.sensitivityGain = oldVal
-                    _uiState.value = _uiState.value.copy(spectrumSensitivityGain = oldVal)
-                }
-            )
-        )
-    }
-
-    fun setSpectrumBandCount(count: Int) {
-        val oldVal = _uiState.value.spectrumBandCount
-        if (oldVal == count) return
-        undoRedoManager.executeCommand(
-            EditorCommand(
-                actionName = "Spectrum Bands ($count)",
-                onExecute = {
-                    spectrumProcessor.bandCount = count
-                    val newMagnitudes = FloatArray(count) { (sin(it.toDouble() * 0.4) * 0.4 + 0.5).toFloat() }
-                    _uiState.value = _uiState.value.copy(
-                        spectrumBandCount = count,
-                        spectrumMagnitudes = newMagnitudes
-                    )
-                },
-                onUndo = {
-                    spectrumProcessor.bandCount = oldVal
-                    val oldMagnitudes = FloatArray(oldVal) { (sin(it.toDouble() * 0.4) * 0.4 + 0.5).toFloat() }
-                    _uiState.value = _uiState.value.copy(
-                        spectrumBandCount = oldVal,
-                        spectrumMagnitudes = oldMagnitudes
-                    )
-                }
-            )
-        )
-    }
-
-    fun updateSpectrumData(magnitudes: FloatArray, peakDb: Float, rms: Float) {
-        _uiState.value = _uiState.value.copy(
-            spectrumMagnitudes = magnitudes,
-            spectrumPeakDb = peakDb,
-            spectrumRmsEnergy = rms
-        )
     }
 
     fun onMediaSelected(uri: String, name: String) {
@@ -629,6 +498,10 @@ class EditorViewModel(
         _uiState.value = _uiState.value.copy(playbackSpeed = 1.0f)
     }
 
+    fun updateMetadata(metadata: com.example.core.media.AudioMetadata) {
+        _uiState.value = _uiState.value.copy(metadata = metadata)
+    }
+
     fun applyProjectTemplate(template: ProjectTemplate) {
         _uiState.value = _uiState.value.copy(
             playbackSpeed = template.playbackSpeed,
@@ -764,7 +637,10 @@ class EditorViewModel(
 
     fun startEditorExport(customFileName: String? = null, destinationFolder: String? = null, exportFormat: String = "mp4") {
         val state = _uiState.value
-        val mediaUri = state.selectedMediaUri ?: return
+        val mediaUri = state.selectedMediaUri ?: run {
+            _uiState.value = state.copy(validationError = "Pilih video terlebih dahulu sebelum memulai export.")
+            return
+        }
 
         viewModelScope.launch {
             try {

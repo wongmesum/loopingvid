@@ -48,7 +48,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -90,6 +90,8 @@ import kotlinx.coroutines.isActive
 import java.util.Locale
 import com.example.core.media.AudioAnalysisData
 import com.example.core.media.WaveformAnalyzer
+import com.example.ui.theme.StudioLiveRed
+import com.example.ui.theme.StudioSuccessGreen
 import androidx.compose.material3.Switch
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
@@ -339,14 +341,14 @@ fun Media3SegmentTrimmer(
                         Icon(
                             imageVector = Icons.Default.Movie,
                             contentDescription = null,
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Select a video to begin Media3 segment trimming",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else if (errorMessage != null) {
@@ -393,7 +395,7 @@ fun Media3SegmentTrimmer(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Surface(
-                                color = Color(0xFF16A34A).copy(alpha = 0.85f),
+                                color = StudioSuccessGreen.copy(alpha = 0.85f),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Row(
@@ -404,7 +406,7 @@ fun Media3SegmentTrimmer(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "In [A]: ${formatTimecode(startMs)}",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White
                                     )
                                 }
@@ -428,7 +430,7 @@ fun Media3SegmentTrimmer(
                                         Spacer(modifier = Modifier.width(4.dp))
                                         Text(
                                             text = "${String.format(Locale.US, "%.1fx", zoomScale)} Zoom (Reset)",
-                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                             color = Color.White
                                         )
                                     }
@@ -436,7 +438,7 @@ fun Media3SegmentTrimmer(
                             }
 
                             Surface(
-                                color = Color(0xFFDC2626).copy(alpha = 0.85f),
+                                color = StudioLiveRed.copy(alpha = 0.85f),
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Row(
@@ -447,7 +449,7 @@ fun Media3SegmentTrimmer(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "Out [B]: ${formatTimecode(if (endMs > 0) endMs else totalDurationMs)}",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp),
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White
                                     )
                                 }
@@ -548,10 +550,10 @@ fun Media3SegmentTrimmer(
                                         },
                                         contentPadding = ButtonDefaults.ContentPadding,
                                         shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = StudioSuccessGreen),
                                         modifier = Modifier.testTag("mark_in_button")
                                     ) {
-                                        Text("Mark In [A]", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                                        Text("Mark In [A]", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                                     }
 
                                     Button(
@@ -562,10 +564,10 @@ fun Media3SegmentTrimmer(
                                         },
                                         contentPadding = ButtonDefaults.ContentPadding,
                                         shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                                        colors = ButtonDefaults.buttonColors(containerColor = StudioLiveRed),
                                         modifier = Modifier.testTag("mark_out_button")
                                     ) {
-                                        Text("Mark Out [B]", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                                        Text("Mark Out [B]", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                                     }
                                 }
                             }
@@ -592,6 +594,8 @@ fun Media3SegmentTrimmer(
                         }
                     }
 
+                    val waveformColor = MaterialTheme.colorScheme.secondary
+                    val beatMarkerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     Box(modifier = Modifier.fillMaxWidth().height(60.dp)) {
                         // Waveform Visualizer
                         audioAnalysisData?.let { analysis ->
@@ -600,7 +604,7 @@ fun Media3SegmentTrimmer(
                                 val height = size.height
                                 val points = analysis.waveformPoints
                                 val barWidth = width / points.size
-                                val primaryColor = Color.Cyan.copy(alpha = 0.5f)
+                                val primaryColor = waveformColor.copy(alpha = 0.5f)
                                 
                                 val path = Path()
                                 path.moveTo(0f, height / 2f)
@@ -617,11 +621,10 @@ fun Media3SegmentTrimmer(
                                 }
                                 
                                 // Draw beat markers
-                                val beatColor = Color.White.copy(alpha = 0.6f)
                                 analysis.beatMarkersMs.forEach { beatMs ->
                                     val x = (beatMs.toFloat() / analysis.durationMs.toFloat()) * width
                                     drawLine(
-                                        color = beatColor,
+                                        color = beatMarkerColor,
                                         start = Offset(x, 0f),
                                         end = Offset(x, height),
                                         strokeWidth = 2f
@@ -745,7 +748,7 @@ fun Media3SegmentTrimmer(
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     ),
-                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
@@ -754,7 +757,7 @@ fun Media3SegmentTrimmer(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Precision Millisecond Nudge Controls for In (A) and Out (B)
             Row(
@@ -765,7 +768,7 @@ fun Media3SegmentTrimmer(
                 NudgeControlBox(
                     title = "In-Point (Start)",
                     timestampMs = startMs,
-                    accentColor = Color(0xFF16A34A),
+                    accentColor = StudioSuccessGreen,
                     modifier = Modifier.weight(1f),
                     onNudge = { deltaMs ->
                         val newStart = (startMs + deltaMs).coerceIn(0L, maxOf(0L, endMs - 100L))
@@ -780,7 +783,7 @@ fun Media3SegmentTrimmer(
                 NudgeControlBox(
                     title = "Out-Point (End)",
                     timestampMs = if (endMs > 0) endMs else totalDurationMs,
-                    accentColor = Color(0xFFDC2626),
+                    accentColor = StudioLiveRed,
                     modifier = Modifier.weight(1f),
                     onNudge = { deltaMs ->
                         val maxLimit = if (totalDurationMs > 0) totalDurationMs else 600000L
@@ -936,7 +939,7 @@ private fun NudgeButton(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
         )

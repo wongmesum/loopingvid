@@ -38,7 +38,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Speed
@@ -48,7 +48,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +63,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -75,6 +74,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.ui.theme.ElegantGoldDim
+import com.example.ui.theme.StudioSuccessGreen
 import java.io.File
 
 @Composable
@@ -131,7 +132,7 @@ fun ExportSummaryDialog(
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Surface(
-                            color = Color(0xFF10B981).copy(alpha = 0.15f),
+                            color = StudioSuccessGreen.copy(alpha = 0.15f),
                             shape = CircleShape,
                             modifier = Modifier.size(44.dp)
                         ) {
@@ -139,7 +140,7 @@ fun ExportSummaryDialog(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = "Success",
-                                    tint = Color(0xFF10B981),
+                                    tint = StudioSuccessGreen,
                                     modifier = Modifier.size(26.dp)
                                 )
                             }
@@ -171,7 +172,7 @@ fun ExportSummaryDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Main Content List
@@ -252,7 +253,7 @@ fun ExportSummaryDialog(
                                                 .fillMaxWidth()
                                                 .height(220.dp)
                                                 .clip(RoundedCornerShape(12.dp))
-                                                .background(Color.Black),
+                                                .background(MaterialTheme.colorScheme.background),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             VideoPlayer(
@@ -396,13 +397,13 @@ fun ExportSummaryDialog(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                                 Surface(
-                                    color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                    color = StudioSuccessGreen.copy(alpha = 0.15f),
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
                                     Text(
                                         text = "SMART CHECK",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = Color(0xFF10B981),
+                                        color = StudioSuccessGreen,
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
@@ -423,7 +424,7 @@ fun ExportSummaryDialog(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Bottom Action Buttons Row
@@ -480,7 +481,7 @@ fun ExportSummaryDialog(
                             .testTag("open_gallery_button"),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.OpenInNew, contentDescription = "Gallery", modifier = Modifier.size(18.dp))
+                        Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Gallery", modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("Gallery")
                     }
@@ -550,18 +551,18 @@ private fun MetadataTile(
 private fun SocialPlatformCard(platform: SocialPlatformCompatibility) {
     val (badgeBg, badgeText, statusIcon) = when (platform.level) {
         CompatibilityLevel.OPTIMAL -> Triple(
-            Color(0xFF10B981).copy(alpha = 0.15f),
-            Color(0xFF10B981),
+            StudioSuccessGreen.copy(alpha = 0.15f),
+            StudioSuccessGreen,
             Icons.Default.CheckCircle
         )
         CompatibilityLevel.GOOD -> Triple(
-            Color(0xFF0284C7).copy(alpha = 0.15f),
-            Color(0xFF0284C7),
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+            MaterialTheme.colorScheme.secondary,
             Icons.Default.Info
         )
         CompatibilityLevel.WARNING -> Triple(
-            Color(0xFFD97706).copy(alpha = 0.15f),
-            Color(0xFFD97706),
+            ElegantGoldDim.copy(alpha = 0.15f),
+            ElegantGoldDim,
             Icons.Default.Warning
         )
     }

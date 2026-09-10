@@ -16,3 +16,9 @@
 local.properties
 .env
 debug.keystore
+
+# Archived one-off development/patch scripts (kept locally, not part of the build)
+/scripts/archive/
+
+# Scratch build/verification logs (local only)
+/*.log

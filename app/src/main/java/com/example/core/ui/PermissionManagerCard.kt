@@ -53,6 +53,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.ElegantGoldDim
+import com.example.ui.theme.StudioSuccessGreen
 
 /**
  * Centralized Permission Manager Card for displaying and requesting permissions
@@ -121,8 +123,8 @@ fun PermissionManagerCard(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            if (allGranted) Color(0xFF10B981).copy(alpha = 0.2f)
-                            else Color(0xFFF59E0B).copy(alpha = 0.2f)
+                            if (allGranted) StudioSuccessGreen.copy(alpha = 0.2f)
+                            else ElegantGoldDim.copy(alpha = 0.2f)
                         )
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
@@ -130,14 +132,14 @@ fun PermissionManagerCard(
                         Icon(
                             imageVector = if (allGranted) Icons.Default.CheckCircle else Icons.Default.Warning,
                             contentDescription = if (allGranted) "All Granted" else "Permissions Needed",
-                            tint = if (allGranted) Color(0xFF10B981) else Color(0xFFF59E0B),
+                            tint = if (allGranted) StudioSuccessGreen else ElegantGoldDim,
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = if (allGranted) "ALL GRANTED" else "ACTION NEEDED",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = if (allGranted) Color(0xFF10B981) else Color(0xFFF59E0B)
+                            color = if (allGranted) StudioSuccessGreen else ElegantGoldDim
                         )
                     }
                 }
@@ -201,7 +203,7 @@ fun PermissionManagerCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("App Settings", fontSize = 12.sp)
+                    Text("App Settings", style = MaterialTheme.typography.labelLarge)
                 }
             }
         }
@@ -267,7 +269,7 @@ private fun PermissionGroupRow(
             .background(MaterialTheme.colorScheme.surface)
             .border(
                 width = 1.dp,
-                color = if (isGranted) Color(0xFF10B981).copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant,
+                color = if (isGranted) StudioSuccessGreen.copy(alpha = 0.3f) else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(10.dp)
             )
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -283,7 +285,7 @@ private fun PermissionGroupRow(
                     .size(36.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isGranted) Color(0xFF10B981).copy(alpha = 0.15f)
+                        if (isGranted) StudioSuccessGreen.copy(alpha = 0.15f)
                         else MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                     ),
                 contentAlignment = Alignment.Center
@@ -291,7 +293,7 @@ private fun PermissionGroupRow(
                 Icon(
                     imageVector = icon,
                     contentDescription = group.title,
-                    tint = if (isGranted) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                    tint = if (isGranted) StudioSuccessGreen else MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -307,7 +309,6 @@ private fun PermissionGroupRow(
                 Text(
                     text = group.description,
                     style = MaterialTheme.typography.labelSmall,
-                    fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
@@ -320,22 +321,21 @@ private fun PermissionGroupRow(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                    .background(StudioSuccessGreen.copy(alpha = 0.15f))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Granted",
-                        tint = Color(0xFF10B981),
+                        tint = StudioSuccessGreen,
                         modifier = Modifier.size(12.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "GRANTED",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF10B981)
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = StudioSuccessGreen
                     )
                 }
             }
@@ -346,7 +346,7 @@ private fun PermissionGroupRow(
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.testTag("grant_permission_button_${group.name}")
             ) {
-                Text("Grant", fontSize = 11.sp)
+                Text("Grant", style = MaterialTheme.typography.labelMedium)
             }
         }
     }

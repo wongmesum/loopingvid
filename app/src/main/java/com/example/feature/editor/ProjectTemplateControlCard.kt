@@ -40,7 +40,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +74,7 @@ fun ProjectTemplateControlCard(
     onSaveCurrentAsTemplate: (name: String, description: String, category: String) -> Unit,
     onDeleteCustomTemplate: (templateId: String) -> Unit,
     queueViewModel: ExportQueueViewModel?,
+    selectedMediaUri: String? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedCategoryFilter by remember { mutableStateOf("All") }
@@ -154,7 +155,7 @@ fun ProjectTemplateControlCard(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Category Filter Pills
             LazyRow(
@@ -245,19 +246,21 @@ fun ProjectTemplateControlCard(
 
                             Button(
                                 onClick = {
-                                    if (queueViewModel != null) {
+                                    if (queueViewModel != null && !selectedMediaUri.isNullOrBlank()) {
                                         val filterStr = tpl.colorGradingConfig.buildFfmpegFilterString()
                                         val req = BatchExportRequest(
                                             title = "Template Render: ${tpl.name}",
                                             jobType = "TEMPLATE_EXPORT",
                                             format = "mp4",
                                             destinationFolder = "Movies/Templates",
-                                            ffmpegFilterString = filterStr
+                                            inputUri = selectedMediaUri,
+                                            ffmpegFilterString = filterStr.ifBlank { null },
+                                            playbackSpeed = tpl.playbackSpeed
                                         )
                                         queueViewModel.enqueueProjectExport(req)
                                     }
                                 },
-                                enabled = queueViewModel != null,
+                                enabled = queueViewModel != null && !selectedMediaUri.isNullOrBlank(),
                                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.height(38.dp)
@@ -372,7 +375,7 @@ fun TemplateItemCard(
                 )
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Parameters Specs Row
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

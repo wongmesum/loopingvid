@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -56,7 +56,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -90,6 +89,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.ui.theme.StudioSuccessGreen
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -105,13 +105,13 @@ fun AboutScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Black,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "Tentang Aplikasi & Pengembang",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
@@ -124,12 +124,12 @@ fun AboutScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
@@ -139,7 +139,7 @@ fun AboutScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(bottom = 24.dp)
         ) {
             // Hero Illustration Header
@@ -158,9 +158,9 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("about_me_card"),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -172,14 +172,14 @@ fun AboutScreen(
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = Color(0xFF38BDF8).copy(alpha = 0.2f),
+                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
                                 modifier = Modifier.size(48.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = "Developer",
-                                        tint = Color(0xFF38BDF8),
+                                        tint = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(28.dp)
                                     )
                                 }
@@ -192,31 +192,31 @@ fun AboutScreen(
                                 ) {
                                     Text(
                                         text = "Tentang Pengembang (About Me)",
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onSurface,
                                         fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Icon(
                                         imageVector = Icons.Default.Verified,
                                         contentDescription = "Verified Developer",
-                                        tint = Color(0xFF38BDF8),
+                                        tint = MaterialTheme.colorScheme.secondary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
                                 Text(
                                     text = "Asrocia Studio • ulas.tech",
-                                    color = Color(0xFF38BDF8),
+                                    color = MaterialTheme.colorScheme.secondary,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
                         }
 
-                        Divider(color = Color(0xFF334155))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                         Text(
                             text = "Halo! Saya Asrocia, pengembang mandiri di balik LoopingVid & ulas.tech. Misi saya adalah menghadirkan alat kreasi video dan live streaming RTMP tingkat profesional yang ringan, aman, dan memproses data 100% di dalam HP pengguna tanpa iklan mengganggu.",
-                            color = Color(0xFFE2E8F0),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 13.sp,
                             lineHeight = 20.sp
                         )
@@ -254,9 +254,9 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("about_app_features_card"),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -269,12 +269,12 @@ fun AboutScreen(
                             Icon(
                                 imageVector = Icons.Default.MovieFilter,
                                 contentDescription = "Features",
-                                tint = Color(0xFF10B981),
+                                tint = StudioSuccessGreen,
                                 modifier = Modifier.size(20.dp)
                             )
                             Text(
                                 text = "Keunggulan & Standar Google Play",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -311,9 +311,9 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("about_faq_card"),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     shape = RoundedCornerShape(16.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -326,25 +326,25 @@ fun AboutScreen(
                             Icon(
                                 imageVector = Icons.Default.QuestionAnswer,
                                 contentDescription = "FAQ",
-                                tint = Color(0xFF38BDF8),
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(20.dp)
                             )
                             Column {
                                 Text(
                                     text = "Pertanyaan Umum (FAQ)",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     text = "Jawaban seputar rendering video, paket lisensi, & live stream",
-                                    color = Color(0xFF94A3B8),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                     fontSize = 11.sp
                                 )
                             }
                         }
 
-                        Divider(color = Color(0xFF334155))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                         FaqAccordionGroup(
                             categoryTitle = "Pemrosesan & Rendering Video",
@@ -356,7 +356,7 @@ fun AboutScreen(
                             )
                         )
 
-                        Divider(color = Color(0xFF334155))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                         FaqAccordionGroup(
                             categoryTitle = "Paket Lisensi & Google Play Billing",
@@ -369,7 +369,7 @@ fun AboutScreen(
                             )
                         )
 
-                        Divider(color = Color(0xFF334155))
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
 
                         FaqAccordionGroup(
                             categoryTitle = "Pemecahan Masalah Live Streaming (RTMP)",
@@ -388,17 +388,17 @@ fun AboutScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF1E293B))
-                        .border(1.dp, Color(0xFF334155), RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surface)
+                        .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp))
                 ) {
                     AboutMenuItem(
-                        icon = Icons.Default.HelpOutline,
+                        icon = Icons.AutoMirrored.Filled.HelpOutline,
                         title = "Panduan Interaktif Studio (Tour)",
                         testTag = "about_menu_onboarding_tour",
                         onClick = onStartOnboarding
                     )
 
-                    HorizontalDivider(color = Color(0xFF334155), thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                     AboutMenuItem(
                         icon = Icons.Default.PrivacyTip,
@@ -407,7 +407,7 @@ fun AboutScreen(
                         onClick = onNavigateToPrivacy
                     )
 
-                    HorizontalDivider(color = Color(0xFF334155), thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                     AboutMenuItem(
                         icon = Icons.Default.Favorite,
@@ -416,7 +416,7 @@ fun AboutScreen(
                         onClick = onNavigateToSupport
                     )
 
-                    HorizontalDivider(color = Color(0xFF334155), thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                     AboutMenuItem(
                         icon = Icons.Default.Share,
@@ -425,7 +425,7 @@ fun AboutScreen(
                         onClick = { shareApp(context) }
                     )
 
-                    HorizontalDivider(color = Color(0xFF334155), thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                     AboutMenuItem(
                         icon = Icons.Outlined.ThumbUp,
@@ -434,7 +434,7 @@ fun AboutScreen(
                         onClick = { rateApp(context) }
                     )
 
-                    HorizontalDivider(color = Color(0xFF334155), thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline, thickness = 1.dp)
 
                     AboutMenuItem(
                         icon = Icons.Default.Code,
@@ -454,18 +454,18 @@ fun AboutScreen(
                 ) {
                     Text(
                         text = "LoopingVid v1.0.0 (Build 100)",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = "© 2026 Asrocia Studio • ulas.tech. All rights reserved.",
-                        color = Color(0xFF94A3B8),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         fontSize = 12.sp
                     )
                     Text(
                         text = "Kompatibel dengan Pedoman Pengembang Google Play Store",
-                        color = Color(0xFF64748B),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
                         fontSize = 11.sp
                     )
                 }
@@ -490,9 +490,9 @@ private fun DeveloperLinkChip(
         modifier = Modifier
             .clickable(onClick = onClick)
             .testTag(testTag),
-        color = Color(0xFF0F172A),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(20.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -502,12 +502,12 @@ private fun DeveloperLinkChip(
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = Color(0xFF38BDF8),
+                tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(14.dp)
             )
             Text(
                 text = label,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -528,14 +528,14 @@ private fun FeatureBadgeRow(
     ) {
         Surface(
             shape = CircleShape,
-            color = Color(0xFF10B981).copy(alpha = 0.15f),
+            color = StudioSuccessGreen.copy(alpha = 0.15f),
             modifier = Modifier.size(32.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = title,
-                    tint = Color(0xFF10B981),
+                    tint = StudioSuccessGreen,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -544,13 +544,13 @@ private fun FeatureBadgeRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = description,
-                color = Color(0xFFCBD5E1),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 lineHeight = 16.sp
             )
@@ -560,11 +560,27 @@ private fun FeatureBadgeRow(
 
 @Composable
 private fun AboutHeroHeader() {
+    val illustrationBackground = MaterialTheme.colorScheme.background
+    val gradientTop = MaterialTheme.colorScheme.surfaceVariant
+    val gradientMid = MaterialTheme.colorScheme.surface
+    val gradientBottom = MaterialTheme.colorScheme.background
+    val monitorGlow = MaterialTheme.colorScheme.secondary
+    val monitorStandColor = MaterialTheme.colorScheme.surface
+    val monitorScreenColor = MaterialTheme.colorScheme.background
+    val codeLineAccent = MaterialTheme.colorScheme.secondary
+    val codeLineSuccess = StudioSuccessGreen
+    val codeLineMuted = MaterialTheme.colorScheme.onSurfaceVariant
+    val scrimColor = MaterialTheme.colorScheme.background
+    val heroTitleColor = MaterialTheme.colorScheme.onBackground
+    val heroTaglineColor = MaterialTheme.colorScheme.onSurfaceVariant
+    val proBadgeColor = MaterialTheme.colorScheme.tertiary
+    val proBadgeTextColor = MaterialTheme.colorScheme.onTertiary
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(240.dp)
-            .background(Color(0xFF0D1017))
+            .background(illustrationBackground)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
@@ -574,9 +590,9 @@ private fun AboutHeroHeader() {
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF0F172A),
-                        Color(0xFF090D16),
-                        Color(0xFF05070B)
+                        gradientTop,
+                        gradientMid,
+                        gradientBottom
                     )
                 )
             )
@@ -585,8 +601,8 @@ private fun AboutHeroHeader() {
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFF38BDF8).copy(alpha = 0.25f),
-                        Color(0xFF1E293B).copy(alpha = 0.1f),
+                        monitorGlow.copy(alpha = 0.25f),
+                        gradientMid.copy(alpha = 0.1f),
                         Color.Transparent
                     ),
                     center = Offset(width * 0.75f, height * 0.35f),
@@ -601,14 +617,14 @@ private fun AboutHeroHeader() {
 
             // Monitor stand
             drawRect(
-                color = Color(0xFF1E293B),
+                color = monitorStandColor,
                 topLeft = Offset(monitorLeft + monitorWidth * 0.4f, monitorTop + monitorHeight),
                 size = Size(monitorWidth * 0.2f, height * 0.18f)
             )
 
             // Monitor screen
             drawRoundRect(
-                color = Color(0xFF020617),
+                color = monitorScreenColor,
                 topLeft = Offset(monitorLeft, monitorTop),
                 size = Size(monitorWidth, monitorHeight),
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(8f, 8f)
@@ -619,9 +635,9 @@ private fun AboutHeroHeader() {
                 val lineY = monitorTop + 20f + (i * 16f)
                 val lineWidth = if (i % 3 == 0) monitorWidth * 0.5f else monitorWidth * 0.7f
                 val lineColor = when (i % 3) {
-                    0 -> Color(0xFF38BDF8)
-                    1 -> Color(0xFF10B981)
-                    else -> Color(0xFF94A3B8)
+                    0 -> codeLineAccent
+                    1 -> codeLineSuccess
+                    else -> codeLineMuted
                 }
                 drawRect(
                     color = lineColor.copy(alpha = 0.85f),
@@ -639,8 +655,8 @@ private fun AboutHeroHeader() {
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.6f),
-                            Color.Black
+                            scrimColor.copy(alpha = 0.6f),
+                            scrimColor
                         )
                     )
                 )
@@ -659,17 +675,17 @@ private fun AboutHeroHeader() {
             ) {
                 Text(
                     text = "LoopingVid",
-                    color = Color.White,
+                    color = heroTitleColor,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Surface(
-                    color = Color(0xFF0284C7),
+                    color = proBadgeColor,
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
                         text = "PRO STUDIO",
-                        color = Color.White,
+                        color = proBadgeTextColor,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -681,7 +697,7 @@ private fun AboutHeroHeader() {
 
             Text(
                 text = "Aplikasi Looper Video & Siaran Langsung RTMP 24/7 Terpercaya.",
-                color = Color(0xFFD1D5DB),
+                color = heroTaglineColor,
                 fontSize = 13.sp
             )
         }
@@ -706,7 +722,7 @@ private fun AboutMenuItem(
         Icon(
             imageVector = icon,
             contentDescription = title,
-            tint = Color.White,
+            tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(22.dp)
         )
 
@@ -714,7 +730,7 @@ private fun AboutMenuItem(
 
         Text(
             text = title,
-            color = Color.White,
+            color = MaterialTheme.colorScheme.onSurface,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.weight(1f)
@@ -723,7 +739,7 @@ private fun AboutMenuItem(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.OpenInNew,
             contentDescription = null,
-            tint = Color(0xFF64748B),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
             modifier = Modifier.size(16.dp)
         )
     }
@@ -734,8 +750,8 @@ private fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(20.dp),
-            color = Color(0xFF1E293B),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155)),
+            color = MaterialTheme.colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
             modifier = Modifier.fillMaxWidth(0.95f)
         ) {
             Column(
@@ -744,14 +760,14 @@ private fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
             ) {
                 Text(
                     text = "Lisensi Komponen Terbuka",
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
 
                 Text(
                     text = "LoopingVid dibangun dengan memanfaatkan pustaka sumber terbuka berkualitas tinggi berikut:",
-                    color = Color(0xFFCBD5E1),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp
                 )
 
@@ -770,11 +786,11 @@ private fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
 
                 Button(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Tutup", color = Color.White)
+                    Text("Tutup", color = MaterialTheme.colorScheme.onTertiary)
                 }
             }
         }
@@ -784,13 +800,13 @@ private fun OpenSourceLicensesDialog(onDismiss: () -> Unit) {
 @Composable
 private fun LicenseItem(name: String, license: String) {
     Surface(
-        color = Color(0xFF0F172A),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
-            Text(text = name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            Text(text = license, color = Color(0xFF94A3B8), fontSize = 11.sp)
+            Text(text = name, color = MaterialTheme.colorScheme.onSurface, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(text = license, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 11.sp)
         }
     }
 }
@@ -855,12 +871,12 @@ private fun FaqAccordionGroup(
             Icon(
                 imageVector = categoryIcon,
                 contentDescription = null,
-                tint = Color(0xFF10B981),
+                tint = StudioSuccessGreen,
                 modifier = Modifier.size(16.dp)
             )
             Text(
                 text = categoryTitle,
-                color = Color(0xFF10B981),
+                color = StudioSuccessGreen,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -870,11 +886,11 @@ private fun FaqAccordionGroup(
             val isExpanded = expandedIndex == index
 
             Surface(
-                color = Color(0xFF0F172A),
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(10.dp),
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
-                    if (isExpanded) Color(0xFF38BDF8).copy(alpha = 0.5f) else Color(0xFF334155)
+                    if (isExpanded) MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outline
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -895,7 +911,7 @@ private fun FaqAccordionGroup(
                     ) {
                         Text(
                             text = question,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f)
@@ -904,7 +920,7 @@ private fun FaqAccordionGroup(
                         Icon(
                             imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
                             contentDescription = if (isExpanded) "Tutup" else "Buka",
-                            tint = Color(0xFF94A3B8),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -912,11 +928,11 @@ private fun FaqAccordionGroup(
                     AnimatedVisibility(visible = isExpanded) {
                         Column {
                             Spacer(modifier = Modifier.height(8.dp))
-                            Divider(color = Color(0xFF1E293B))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = answer,
-                                color = Color(0xFFCBD5E1),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp,
                                 lineHeight = 17.sp
                             )

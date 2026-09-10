@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -140,6 +142,7 @@ fun ScrollingTickerOverlay(
 /**
  * Ticker Configuration & Customization Control Panel
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ScrollingTickerControlCard(
     tickerText: String,
@@ -248,8 +251,9 @@ fun ScrollingTickerControlCard(
                             )
                         }
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TickerSpeed.entries.forEach { speed ->
                                 FilterChip(
@@ -274,8 +278,9 @@ fun ScrollingTickerControlCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             TickerPosition.entries.forEach { pos ->
                                 FilterChip(
@@ -309,9 +314,9 @@ fun ScrollingTickerControlCard(
                             )
                         }
 
-                        Row(
+                        FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             TICKER_PRESET_STYLES.forEachIndexed { index, style ->
                                 val isSelected = selectedStyleIndex == index

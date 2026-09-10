@@ -10,6 +10,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -83,6 +85,7 @@ import com.example.core.ui.VideoPlayer
 import com.example.core.ui.ExportDialog
 import com.example.core.ui.PrecisionVideoTrimControl
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LoopScreen(
     exportViewModel: com.example.core.ui.ExportViewModel,
@@ -349,8 +352,29 @@ fun LoopScreen(
                 onSegmentChanged = { startMs, endMs ->
                     viewModel.setTrim(startMs / 1000.0, endMs / 1000.0)
                 },
-                onExportSegmentRequested = { _, _, _ ->
-                    viewModel.startRenderJob()
+                onExportSegmentRequested = { startMs, endMs, _ ->
+                    // Apply the chosen segment as the trim, then open the same export dialog the
+                    // main render button uses (consistent filename/format/destination selection).
+                    val mediaUri = uiState.selectedMediaUri
+                    if (mediaUri != null) {
+                        viewModel.setTrim(startMs / 1000.0, endMs / 1000.0)
+                        exportViewModel.showDialogForLoop(
+                            "LoopVideo",
+                            com.example.core.ui.ExportJobConfig.LoopJob(
+                                inputUri = mediaUri,
+                                targetDurationSec = uiState.targetDurationSec,
+                                loopStyle = uiState.loopStyle,
+                                crossfadeDurationSec = uiState.crossfadeDurationSec,
+                                trimStartSec = startMs / 1000.0,
+                                trimEndSec = endMs / 1000.0,
+                                muteAudio = uiState.muteAudio,
+                                audioFadeInSec = uiState.audioFadeInSec,
+                                audioFadeOutSec = uiState.audioFadeOutSec,
+                                presetQuality = uiState.presetQuality,
+                                metadata = uiState.metadata
+                            )
+                        )
+                    }
                 }
             )
         }
@@ -373,17 +397,26 @@ fun LoopScreen(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                // Style Chips
+                // Style Chips. FlowRow instead of a fixed Row so labels (e.g. "CROSSFADE
+                // (Smooth)") wrap onto a second line of chips on narrow phone screens instead
+                // of overflowing/wrapping their text vertically inside a single chip.
                 Text("Loop Style Transition", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     listOf("NORMAL", "CROSSFADE", "PING_PONG").forEach { style ->
                         FilterChip(
                             selected = uiState.loopStyle == style,
                             onClick = { viewModel.setLoopStyle(style) },
-                            label = { Text(if (style == "CROSSFADE") "CROSSFADE (Smooth)" else style) },
+                            label = {
+                                Text(
+                                    text = if (style == "CROSSFADE") "CROSSFADE (Smooth)" else style,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -680,18 +713,24 @@ fun LoopScreen(
             ) {
                 if (!uiState.jobProgress.isProcessing) {
                     Button(
-                        onClick = { exportViewModel.showDialogForLoop("LoopVideo", com.example.core.ui.ExportJobConfig.LoopJob(
-                                inputUri = uiState.selectedMediaUri!!,
-                                targetDurationSec = uiState.targetDurationSec,
-                                loopStyle = uiState.loopStyle,
-                                crossfadeDurationSec = uiState.crossfadeDurationSec,
-                                trimStartSec = uiState.trimStartSec,
-                                trimEndSec = uiState.trimEndSec,
-                                muteAudio = uiState.muteAudio,
-                                audioFadeInSec = uiState.audioFadeInSec,
-                                audioFadeOutSec = uiState.audioFadeOutSec,
-                                presetQuality = uiState.presetQuality
-                            )) },
+                        onClick = {
+                            val mediaUri = uiState.selectedMediaUri
+                            if (mediaUri != null) {
+                                exportViewModel.showDialogForLoop("LoopVideo", com.example.core.ui.ExportJobConfig.LoopJob(
+                                    inputUri = mediaUri,
+                                    targetDurationSec = uiState.targetDurationSec,
+                                    loopStyle = uiState.loopStyle,
+                                    crossfadeDurationSec = uiState.crossfadeDurationSec,
+                                    trimStartSec = uiState.trimStartSec,
+                                    trimEndSec = uiState.trimEndSec,
+                                    muteAudio = uiState.muteAudio,
+                                    audioFadeInSec = uiState.audioFadeInSec,
+                                    audioFadeOutSec = uiState.audioFadeOutSec,
+                                    presetQuality = uiState.presetQuality,
+                                    metadata = uiState.metadata
+                                ))
+                            }
+                        },
                         enabled = uiState.selectedMediaUri != null,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -715,6 +754,24 @@ fun LoopScreen(
                         accentColor = MaterialTheme.colorScheme.primary,
                         onCancel = { viewModel.cancelRenderJob() }
                     )
+                }
+
+                // Show the last render error persistently so failures are visible instead of silent.
+                uiState.jobProgress.errorMessage?.let { err ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
+                        Text(
+                            text = "Render error: $err",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                 }
 
                 // Go Live Direct Pipeline

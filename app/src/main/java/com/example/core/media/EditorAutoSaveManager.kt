@@ -4,7 +4,6 @@ import android.content.Context
 import com.example.core.database.AppDatabase
 import com.example.core.database.EditorAutoSaveEntity
 import com.example.feature.editor.EditorUiState
-import com.example.feature.editor.VisualizerMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -93,7 +92,6 @@ class EditorAutoSaveManager(private val context: Context) {
                 showTimerOverlay = state.showTimerOverlay,
                 spectrumStyle = state.spectrumStyle.name,
                 presetQuality = state.presetQuality,
-                visualizerMode = state.visualizerMode.name,
                 playbackSpeed = state.playbackSpeed,
                 selectedTemplateId = state.selectedTemplateId,
                 trimStartSec = state.trimStartSec,
@@ -121,12 +119,6 @@ class EditorAutoSaveManager(private val context: Context) {
                 SpectrumStyle.valueOf(entity.spectrumStyle)
             } catch (_: Exception) {
                 SpectrumStyle.BARS
-            }
-
-            val visualizerMode = try {
-                VisualizerMode.valueOf(entity.visualizerMode)
-            } catch (_: Exception) {
-                VisualizerMode.FFT_BARS
             }
 
             // Deserialize ColorGradingConfig
@@ -203,7 +195,6 @@ class EditorAutoSaveManager(private val context: Context) {
                 showTimerOverlay = entity.showTimerOverlay,
                 spectrumStyle = spectrumStyle,
                 presetQuality = entity.presetQuality,
-                visualizerMode = visualizerMode,
                 colorGradingConfig = colorGradingConfig,
                 transitionConfig = transitionConfig,
                 playbackSpeed = entity.playbackSpeed,

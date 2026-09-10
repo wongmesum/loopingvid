@@ -296,7 +296,10 @@ fun StreamDiagnosticOverlayCard(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.NetworkCheck,
                                         contentDescription = null,
@@ -307,9 +310,13 @@ fun StreamDiagnosticOverlayCard(
                                     Text(
                                         text = "Network Latency & Jitter",
                                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
+
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 Text(
                                     text = "${uiState.latencyMs} ms RTT",
@@ -361,7 +368,10 @@ fun StreamDiagnosticOverlayCard(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Videocam,
                                         contentDescription = null,
@@ -372,9 +382,13 @@ fun StreamDiagnosticOverlayCard(
                                     Text(
                                         text = "Video Encoding & Dropped Frames",
                                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
+
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 Text(
                                     text = "${uiState.droppedFrames} Drops (${String.format("%.1f", frameLossPct)}%)",
@@ -427,7 +441,10 @@ fun StreamDiagnosticOverlayCard(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
                                     Icon(
                                         imageVector = Icons.Default.Speed,
                                         contentDescription = null,
@@ -438,9 +455,13 @@ fun StreamDiagnosticOverlayCard(
                                     Text(
                                         text = "RTMP Stream Bitrate",
                                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                                     )
                                 }
+
+                                Spacer(modifier = Modifier.width(8.dp))
 
                                 Text(
                                     text = "${uiState.currentBitrateKbps} / ${uiState.targetBitrateKbps} Kbps",
