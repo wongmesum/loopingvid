@@ -670,21 +670,35 @@ class EditorViewModel(
         
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(jobProgress = com.example.core.ffmpeg.JobProgressState(statusText = "Analyzing audio with Gemini 1.5 Pro to generate captions...", progress = 10, isProcessing = true))
-            
-            val dao = com.example.core.database.AppDatabase.getDatabase(context).appSettingDao()
-            val apiKey = dao.getValueByKey("gemini_api_key") ?: ""
-            
-            val generator = com.example.core.media.GeminiCaptionGenerator(context)
-            val srtCaptions = generator.generateCaptionsForVideo(mediaUri, apiKey)
-            
-            if (srtCaptions.startsWith("Error:")) {
+
+            try {
+                val dao = com.example.core.database.AppDatabase.getDatabase(context).appSettingDao()
+                val apiKey = dao.getValueByKey("gemini_api_key") ?: ""
+
+                val generator = com.example.core.media.GeminiCaptionGenerator(context)
+                val srtCaptions = generator.generateCaptionsForVideo(mediaUri, apiKey)
+
+                if (srtCaptions.startsWith("Error:")) {
+                    _uiState.value = _uiState.value.copy(
+                        jobProgress = com.example.core.ffmpeg.JobProgressState(statusText = srtCaptions, progress = 0, isProcessing = false),
+                        validationError = srtCaptions
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        aiGeneratedCaptions = srtCaptions,
+                        jobProgress = com.example.core.ffmpeg.JobProgressState(statusText = "Captions Generated Successfully!", progress = 100, isProcessing = false)
+                    )
+                }
+            } catch (e: Exception) {
+                // Previously an uncaught exception here (e.g. the AppSettingDao query failing
+                // against a closed/locked database) left jobProgress.isProcessing stuck at true
+                // forever with no user-facing feedback. Reset processing state and surface the
+                // failure through the same validationError field the global error dialog in
+                // MainScreen already observes for other Editor failures.
+                val message = "Gagal membuat caption otomatis: ${e.message ?: e::class.simpleName}"
                 _uiState.value = _uiState.value.copy(
-                    jobProgress = com.example.core.ffmpeg.JobProgressState(statusText = srtCaptions, progress = 0, isProcessing = false)
-                )
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    aiGeneratedCaptions = srtCaptions,
-                    jobProgress = com.example.core.ffmpeg.JobProgressState(statusText = "Captions Generated Successfully!", progress = 100, isProcessing = false)
+                    jobProgress = com.example.core.ffmpeg.JobProgressState(statusText = message, progress = 0, isProcessing = false),
+                    validationError = message
                 )
             }
         }
