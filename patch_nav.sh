@@ -1,2 +1,0 @@
-sed -i 's/onNavigateToSupport = {/onNavigateToSupport = {\n                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https:\/\/www.facebook.com\/share\/1LwG2YHbik\/"))\n                        navController.context.startActivity(intent)/g' app/src/main/java/com/example/ui/navigation/MainScreen.kt
-sed -i 's/navController.navigate(NavDestination.SupportProject.route)//g' app/src/main/java/com/example/ui/navigation/MainScreen.kt

@@ -47,7 +47,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -95,9 +95,8 @@ enum class MasteringToolCategory(val title: String, val icon: ImageVector, val d
     NOISE_REDUCTION("FFT Noise Filter", Icons.Default.GraphicEq, "Real-Time FFT Hiss & Static Reduction"),
     AUTO_LEVELING("Auto Leveling", Icons.Default.Autorenew, "Dynamic Normalization & LUFS Matching"),
     EQUALIZER("5-Band EQ", Icons.Default.Equalizer, "Low, Mid-Low, Mid, Mid-High & High"),
-    GAIN_DYNAMICS("Gain & LUFS", Icons.Default.VolumeUp, "Input Gain, Output Gain & LUFS Target"),
+    GAIN_DYNAMICS("Gain & LUFS", Icons.AutoMirrored.Filled.VolumeUp, "Input Gain, Output Gain & LUFS Target"),
     AUDIO_FADES("Track Fades", Icons.Default.Timeline, "Fade-In & Fade-Out Envelope"),
-    AUDIO_METADATA("Metadata", Icons.Default.Info, "ID3 Tags: Title, Artist, Genre"),
     EXPORT("Export", Icons.Default.Download, "Export Format & Mastering Action"),
     ALL_TOOLS("All Tools", Icons.Default.FolderOpen, "View All Mastering Controls")
 }
@@ -151,14 +150,9 @@ fun MasteringScreen(
             
             Button(
                 onClick = { 
-                    if (uiState.selectedAudioUri != null) {
-                        exportViewModel.showDialogForMastering("MasteredAudio", com.example.core.ui.ExportJobConfig.MasteringJob(
-                            inputUri = uiState.selectedAudioUri!!,
-                            presetName = uiState.selectedPreset.name,
-                            targetLufs = uiState.targetLufs,
-                            fadeInSec = uiState.fadeInSec,
-                            fadeOutSec = uiState.fadeOutSec
-                        ))
+                    val audioUri = uiState.selectedAudioUri
+                    if (audioUri != null) {
+                        exportViewModel.showDialogForMastering("MasteredAudio", buildMasteringJobConfig(uiState, audioUri))
                     }
                 },
                 enabled = uiState.selectedAudioUri != null && !uiState.jobProgress.isProcessing,
@@ -166,9 +160,9 @@ fun MasteringScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                 modifier = Modifier.height(42.dp)
             ) {
-                Icon(imageVector = Icons.Default.Download, contentDescription = "Export", tint = Color.Black, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Default.Download, contentDescription = "Export", tint = MaterialTheme.colorScheme.onSecondary, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Export", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = Color.Black)
+                Text("Export", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSecondary)
             }
         }
 
@@ -305,7 +299,7 @@ fun MasteringScreen(
                                 Icon(
                                     imageVector = category.icon,
                                     contentDescription = category.title,
-                                    tint = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -314,7 +308,7 @@ fun MasteringScreen(
                                     style = MaterialTheme.typography.labelMedium.copy(
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     ),
-                                    color = if (isSelected) Color.Black else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -500,20 +494,8 @@ fun MasteringScreen(
                         )
                     }
 
-                                        MasteringToolCategory.AUDIO_METADATA -> {
-                        AudioMetadataEditorCard(
-                            metadata = uiState.audioMetadata,
-                            onMetadataChanged = { viewModel.updateAudioMetadata(it) }
-                        )
-                    }
                     MasteringToolCategory.AUDIO_FADES -> {
-
-                                                AudioMetadataEditorCard(
-                            metadata = uiState.audioMetadata,
-                            onMetadataChanged = { viewModel.updateAudioMetadata(it) }
-                        )
                         AudioFadeControlCard(
-
                             fadeInSec = uiState.fadeInSec,
                             fadeOutSec = uiState.fadeOutSec,
                             onFadeInChanged = { viewModel.updateFadeInPreview(it) },
@@ -566,14 +548,9 @@ fun MasteringScreen(
                                 if (!uiState.jobProgress.isProcessing) {
                                     Button(
                                         onClick = { 
-                                            if (uiState.selectedAudioUri != null) {
-                                                exportViewModel.showDialogForMastering("MasteredAudio", com.example.core.ui.ExportJobConfig.MasteringJob(
-                                                    inputUri = uiState.selectedAudioUri!!,
-                                                    presetName = uiState.selectedPreset.name,
-                                                    targetLufs = uiState.targetLufs,
-                                                    fadeInSec = uiState.fadeInSec,
-                                                    fadeOutSec = uiState.fadeOutSec
-                                                ))
+                                            val audioUri = uiState.selectedAudioUri
+                                            if (audioUri != null) {
+                                                exportViewModel.showDialogForMastering("MasteredAudio", buildMasteringJobConfig(uiState, audioUri))
                                             }
                                         },
                                         enabled = uiState.selectedAudioUri != null,
@@ -584,20 +561,21 @@ fun MasteringScreen(
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                                     ) {
-                                        Icon(imageVector = Icons.Default.Equalizer, contentDescription = "Export Master", tint = Color.Black)
+                                        Icon(imageVector = Icons.Default.Equalizer, contentDescription = "Export Master", tint = MaterialTheme.colorScheme.onSecondary)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text(
                                             text = "Export Mastered Audio",
                                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                            color = Color.Black
+                                            color = MaterialTheme.colorScheme.onSecondary
                                         )
                                     }
                                     
                                     OutlinedButton(
                                         onClick = {
-                                            if (uiState.selectedAudioUri != null) {
+                                            val audioUri = uiState.selectedAudioUri
+                                            if (audioUri != null) {
                                                 exportViewModel.showDialogForTwoPassNormalization("NormalizedAudio", com.example.core.ui.ExportJobConfig.TwoPassAudioNormalizationJob(
-                                                    inputUri = uiState.selectedAudioUri!!,
+                                                    inputUri = audioUri,
                                                     targetLufs = uiState.targetLufs
                                                 ))
                                             }
@@ -626,6 +604,23 @@ fun MasteringScreen(
                                     )
                                 }
 
+                                // Show the last render error persistently so failures are visible
+                                // instead of silently producing nothing.
+                                uiState.jobProgress.errorMessage?.let { err ->
+                                    Surface(
+                                        color = MaterialTheme.colorScheme.errorContainer,
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Export error: $err",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onErrorContainer,
+                                            modifier = Modifier.padding(12.dp)
+                                        )
+                                    }
+                                }
+
                                 AnimatedVisibility(visible = uiState.lastMasteredOutputUri != null) {
                                     uiState.lastMasteredOutputUri?.let { outputPath ->
                                         Column(
@@ -649,7 +644,7 @@ fun MasteringScreen(
                                             ) {
                                                 Icon(imageVector = Icons.Default.Radio, contentDescription = "Go Live")
                                                 Spacer(modifier = Modifier.width(8.dp))
-                                                Text("Use in Live Stream / Editor", color = Color.White, fontWeight = FontWeight.Bold)
+                                                Text("Use in Live Stream / Editor", color = MaterialTheme.colorScheme.onPrimary, fontWeight = FontWeight.Bold)
                                             }
                                         }
                                     }
@@ -659,10 +654,6 @@ fun MasteringScreen(
                     }
 
                     MasteringToolCategory.ALL_TOOLS -> {
-                        AudioMetadataEditorCard(
-                            metadata = uiState.audioMetadata,
-                            onMetadataChanged = { viewModel.updateAudioMetadata(it) }
-                        )
                         AudioFadeControlCard(
                             fadeInSec = uiState.fadeInSec,
                             fadeOutSec = uiState.fadeOutSec,
@@ -722,3 +713,31 @@ fun MasteringScreen(
     }
 }
 
+
+/**
+ * Assembles the full mastering export config from the current UI state so that EVERY control
+ * (preset, target LUFS, EQ, compressor, gains, noise reduction, auto-leveling, fades, metadata)
+ * is actually applied on export rather than silently dropped.
+ */
+private fun buildMasteringJobConfig(
+    uiState: MasteringUiState,
+    audioUri: String
+): com.example.core.ui.ExportJobConfig.MasteringJob {
+    return com.example.core.ui.ExportJobConfig.MasteringJob(
+        inputUri = audioUri,
+        presetName = uiState.selectedPreset.name,
+        targetLufs = uiState.targetLufs,
+        isNoiseReductionEnabled = uiState.noiseReductionConfig.isEnabled,
+        noiseReductionDb = uiState.noiseReductionConfig.reductionDb,
+        noiseFloorDb = uiState.noiseReductionConfig.noiseFloorDb,
+        isAutoLevelingEnabled = uiState.autoLevelingConfig.isEnabled,
+        autoLevelingTargetLufs = uiState.autoLevelingConfig.targetLoudnessLufs,
+        fadeInSec = uiState.fadeInSec,
+        fadeOutSec = uiState.fadeOutSec,
+        audioMetadata = uiState.audioMetadata,
+        eqConfig = uiState.eqConfig,
+        compressorConfig = uiState.compressorConfig,
+        inputGainDb = uiState.inputGainDb,
+        outputGainDb = uiState.outputGainDb
+    )
+}

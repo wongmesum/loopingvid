@@ -52,7 +52,10 @@ data class MasteringUiState(
     val calculatedOutputLufs: Double = -14.0,
     val audioMetadata: com.example.core.media.AudioMetadata = com.example.core.media.AudioMetadata(),
     val jobProgress: JobProgressState = JobProgressState(),
-    val lastMasteredOutputUri: String? = null
+    val lastMasteredOutputUri: String? = null,
+    // One-time validation error (e.g. "Export" tapped with no audio selected). Consumed by the
+    // global error dialog in MainScreen.
+    val validationError: String? = null
 )
 
 class MasteringViewModel(
@@ -239,14 +242,32 @@ class MasteringViewModel(
     fun clearHistory() { undoRedoManager.clear() }
 
     fun onAudioSelected(uri: String, fileName: String) {
-        val analysis = WaveformAnalyzer.generateSimulatedWaveform()
+        // Show a synthetic waveform immediately for responsiveness, then replace it with
+        // a real amplitude analysis of the selected audio once decoding completes.
+        val placeholder = WaveformAnalyzer.generateSimulatedWaveform()
         _uiState.value = _uiState.value.copy(
             selectedAudioUri = uri,
             selectedAudioName = fileName,
-            analysisData = analysis
+            analysisData = placeholder
         )
         recalculateLufs()
         undoRedoManager.clear()
+
+        val ctx = context
+        if (ctx != null) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val real = WaveformAnalyzer.analyzeAudio(ctx, uri)
+                    // Only apply if the user hasn't switched to a different track meanwhile.
+                    if (_uiState.value.selectedAudioUri == uri) {
+                        _uiState.value = _uiState.value.copy(analysisData = real)
+                        recalculateLufs()
+                    }
+                } catch (t: Throwable) {
+                    // Keep the placeholder waveform on failure.
+                }
+            }
+        }
     }
 
     fun applyPreset(preset: MasteringPreset) {
@@ -608,31 +629,10 @@ class MasteringViewModel(
         _uiState.update { it.copy(audioMetadata = metadata) }
     }
 
-    fun startMasteringExport(customFileName: String? = null, destinationFolder: String? = null) {
-        val state = _uiState.value
-        val inputUri = state.selectedAudioUri ?: return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                mediaProcessor.executeMasteringJob(
-                    inputUri = inputUri,
-                    presetName = state.selectedPreset.name,
-                    targetLufs = state.targetLufs,
-                    exportFormat = state.exportFormat,
-                    customFileName = customFileName,
-                    destinationFolder = destinationFolder,
-                    isNoiseReductionEnabled = state.noiseReductionConfig.isEnabled,
-                    noiseReductionDb = state.noiseReductionConfig.reductionDb,
-                    noiseFloorDb = state.noiseReductionConfig.noiseFloorDb,
-                    isAutoLevelingEnabled = state.autoLevelingConfig.isEnabled,
-                    autoLevelingTargetLufs = state.autoLevelingConfig.targetLoudnessLufs,
-                    fadeInSec = state.fadeInSec,
-                    fadeOutSec = state.fadeOutSec
-                )
-            } catch (e: Exception) {
-                // Handled in progress state
-            }
-        }
+    /** Clears [MasteringUiState.validationError] after the global error dialog has shown it. */
+    fun consumeValidationError() {
+        _uiState.value = _uiState.value.copy(validationError = null)
     }
+
 }
 

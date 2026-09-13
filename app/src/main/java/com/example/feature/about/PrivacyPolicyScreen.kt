@@ -42,7 +42,7 @@ import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,7 +61,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -70,6 +69,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.StudioSuccessGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,20 +82,20 @@ fun PrivacyPolicyScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color(0xFF090D16),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Column {
                         Text(
                             text = "Kebijakan Privasi & Keamanan Data",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
                         Text(
                             text = "Standar Perlindungan Data Google Play",
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             fontSize = 12.sp
                         )
                     }
@@ -108,12 +108,12 @@ fun PrivacyPolicyScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0F172A)
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         }
@@ -131,9 +131,9 @@ fun PrivacyPolicyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .border(1.dp, Color(0xFF10B981).copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                    .border(1.dp, StudioSuccessGreen.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                     .testTag("privacy_safety_badge_banner"),
-                color = Color(0xFF064E3B).copy(alpha = 0.35f)
+                color = StudioSuccessGreen.copy(alpha = 0.35f)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -142,14 +142,14 @@ fun PrivacyPolicyScreen(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF10B981).copy(alpha = 0.2f),
+                        color = StudioSuccessGreen.copy(alpha = 0.2f),
                         modifier = Modifier.size(44.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = Icons.Default.Shield,
                                 contentDescription = "Security Shield",
-                                tint = Color(0xFF10B981),
+                                tint = StudioSuccessGreen,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -158,13 +158,13 @@ fun PrivacyPolicyScreen(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "100% On-Device Processing Guaranteed",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Aplikasi ini memproses semua video/audio secara lokal di HP Anda. Kami tidak menjual atau mengunggah file media Anda ke server luar.",
-                            color = Color(0xFFD1D5DB),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp,
                             lineHeight = 16.sp
                         )
@@ -183,7 +183,7 @@ fun PrivacyPolicyScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Aplikasi LoopingVid ('kami') berkomitmen penuh menjaga privasi pengguna. Berikut rincian penggunaan data:",
-                        color = Color(0xFFE2E8F0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp,
                         lineHeight = 20.sp
                     )
@@ -250,7 +250,7 @@ fun PrivacyPolicyScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Aplikasi ini dapat berinteraksi dengan layanan eksternal pilihan Anda:",
-                        color = Color(0xFFE2E8F0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                     BulletPoint(
@@ -299,7 +299,7 @@ fun PrivacyPolicyScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "Dengan menggunakan LoopingVid, Anda menyetujui ketentuan berikut:",
-                        color = Color(0xFFE2E8F0),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
                     BulletPoint(
@@ -318,9 +318,9 @@ fun PrivacyPolicyScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("privacy_contact_card"),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 shape = RoundedCornerShape(16.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -333,12 +333,12 @@ fun PrivacyPolicyScreen(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = "Contact",
-                            tint = Color(0xFF38BDF8),
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(20.dp)
                         )
                         Text(
                             text = "Kontak Pengembang & Pembaruan",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -346,7 +346,7 @@ fun PrivacyPolicyScreen(
 
                     Text(
                         text = "Jika Anda memiliki pertanyaan mengenai kebijakan privasi ini atau ingin mengajukan masukan:",
-                        color = Color(0xFFCBD5E1),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
 
@@ -382,13 +382,13 @@ fun PrivacyPolicyScreen(
                     ) {
                         Text(
                             text = "Terakhir diperbarui: 1 Agustus 2026",
-                            color = Color(0xFF64748B),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
                             fontSize = 11.sp
                         )
 
                         Text(
                             text = "Salin Tautan Privasi",
-                            color = Color(0xFF38BDF8),
+                            color = MaterialTheme.colorScheme.secondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.clickable {
@@ -420,9 +420,9 @@ private fun PolicySectionCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(testTag),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF334155))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
     ) {
         Column(
             modifier = Modifier
@@ -443,14 +443,14 @@ private fun PolicySectionCard(
                 ) {
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFF0284C7).copy(alpha = 0.2f),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
                         modifier = Modifier.size(36.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 imageVector = icon,
                                 contentDescription = title,
-                                tint = Color(0xFF38BDF8),
+                                tint = MaterialTheme.colorScheme.secondary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -459,13 +459,13 @@ private fun PolicySectionCard(
                     Column {
                         Text(
                             text = title,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = subtitle,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             fontSize = 11.sp
                         )
                     }
@@ -475,7 +475,7 @@ private fun PolicySectionCard(
             AnimatedVisibility(visible = isExpanded) {
                 Column {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Divider(color = Color(0xFF334155))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Spacer(modifier = Modifier.height(12.dp))
                     content()
                 }
@@ -494,7 +494,7 @@ private fun BulletPoint(title: String, description: String) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
-            tint = Color(0xFF10B981),
+            tint = StudioSuccessGreen,
             modifier = Modifier
                 .size(16.dp)
                 .padding(top = 2.dp)
@@ -502,13 +502,13 @@ private fun BulletPoint(title: String, description: String) {
         Column {
             Text(
                 text = title,
-                color = Color.White,
+                color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = description,
-                color = Color(0xFFCBD5E1),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 12.sp,
                 lineHeight = 17.sp
             )
@@ -519,7 +519,7 @@ private fun BulletPoint(title: String, description: String) {
 @Composable
 private fun PermissionRow(icon: ImageVector, name: String, description: String) {
     Surface(
-        color = Color(0xFF0F172A),
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -531,19 +531,19 @@ private fun PermissionRow(icon: ImageVector, name: String, description: String) 
             Icon(
                 imageVector = icon,
                 contentDescription = name,
-                tint = Color(0xFF38BDF8),
+                tint = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.size(22.dp)
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = description,
-                    color = Color(0xFF94A3B8),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     fontSize = 11.sp,
                     lineHeight = 15.sp
                 )

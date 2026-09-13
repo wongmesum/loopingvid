@@ -24,7 +24,7 @@ fun AutoLevelingControlCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         Column(
             modifier = Modifier
@@ -45,23 +45,23 @@ fun AutoLevelingControlCard(
                     Icon(
                         imageVector = Icons.Default.Autorenew,
                         contentDescription = "Auto Leveling",
-                        tint = if (config.isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
+                        tint = if (config.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
                     )
                     Text(
                         text = "Dynamic Auto-Leveling",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = Color.White
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Switch(
                     checked = config.isEnabled,
                     onCheckedChange = onToggleEnabled,
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
+                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
                         checkedTrackColor = MaterialTheme.colorScheme.primary,
-                        uncheckedThumbColor = Color.LightGray,
-                        uncheckedTrackColor = Color(0xFF334155)
+                        uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surface
                     )
                 )
             }
@@ -69,7 +69,7 @@ fun AutoLevelingControlCard(
             Text(
                 text = "Analyzes the entire clip and applies dynamic normalization to maintain consistent loudness.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.LightGray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             if (config.isEnabled) {
@@ -78,8 +78,8 @@ fun AutoLevelingControlCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("Target Loudness", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                        Text("${config.targetLoudnessLufs.toInt()} LUFS", style = MaterialTheme.typography.labelMedium, color = Color.White)
+                        Text("Target Loudness", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("${config.targetLoudnessLufs.toInt()} LUFS", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
                     }
                     Slider(
                         value = config.targetLoudnessLufs,

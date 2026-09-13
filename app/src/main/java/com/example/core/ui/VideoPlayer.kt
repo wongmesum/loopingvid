@@ -112,8 +112,9 @@ fun VideoPlayer(
             exoPlayer.setMediaItem(mediaItem)
             exoPlayer.prepare()
         } catch (e: Exception) {
-            errorMessage = e.localizedMessage ?: "Failed to load media"
-            onError?.invoke(errorMessage!!)
+            val message = e.localizedMessage ?: "Failed to load media"
+            errorMessage = message
+            onError?.invoke(message)
         }
     }
 
@@ -157,8 +158,9 @@ fun VideoPlayer(
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                errorMessage = error.localizedMessage ?: "Playback error"
-                onError?.invoke(errorMessage!!)
+                val message = error.localizedMessage ?: "Playback error"
+                errorMessage = message
+                onError?.invoke(message)
             }
         }
         exoPlayer.addListener(listener)

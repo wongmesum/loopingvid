@@ -114,12 +114,15 @@ fun AudioAdjustmentCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "ExoPlayer Audio Processor",
+                            text = "Audio Preview Adjustments",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Media3 Master Volume, Bass, & Treble Controls",
+                            // Honest label: RootEncoder (the real RTMP broadcast engine) has no
+                            // on-the-fly PCM/EQ hook, so Bass/Treble here cannot reach the actual
+                            // broadcast audio - only local monitoring/preview volume is real.
+                            text = "Local monitoring only - does not change the broadcast audio",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

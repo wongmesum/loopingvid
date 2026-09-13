@@ -50,6 +50,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.StudioSuccessGreen
 
 data class CoffeeOption(
     val emoji: String,
@@ -104,13 +105,13 @@ fun SupportProjectScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Black,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "Dukung proyek",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp
                     )
@@ -123,12 +124,12 @@ fun SupportProjectScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = Color.White
+                            tint = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Black
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             )
         }
@@ -138,7 +139,7 @@ fun SupportProjectScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
-                .background(Color.Black)
+                .background(MaterialTheme.colorScheme.background)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -146,7 +147,7 @@ fun SupportProjectScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF141416)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -158,7 +159,7 @@ fun SupportProjectScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "☕ Traktir saya kopi",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -168,7 +169,7 @@ fun SupportProjectScreen(
 
                     Text(
                         text = "Ucapan terima kasih satu kali, tanpa syarat.",
-                        color = Color(0xFF9CA3AF),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 13.sp
                     )
 
@@ -212,7 +213,7 @@ fun SupportProjectScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFF141416)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -224,7 +225,7 @@ fun SupportProjectScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "💚 Menjadi sponsor",
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -251,13 +252,13 @@ fun SupportProjectScreen(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = Color(0xFF26262B))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Sponsor Perks Checklist
                     Text(
                         text = "Setiap tingkatan membuka paket Sponsor:",
-                        color = Color(0xFFD1D5DB),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -281,13 +282,13 @@ fun SupportProjectScreen(
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = null,
-                                tint = Color(0xFF10B981), // Emerald green checkmark
+                                tint = StudioSuccessGreen, // Emerald green checkmark
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = perkText,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 fontSize = 14.sp
                             )
                         }
@@ -297,7 +298,7 @@ fun SupportProjectScreen(
 
                     Text(
                         text = "Langganan diperbarui secara otomatis setiap bulan sampai dibatalkan. Anda dapat membatalkan kapan saja di Google Play.",
-                        color = Color(0xFF6B7280),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         lineHeight = 16.sp
                     )
@@ -317,7 +318,7 @@ private fun CoffeeGridItem(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF222228))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag("coffee_item_${option.id}")
@@ -332,7 +333,7 @@ private fun CoffeeGridItem(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = option.price,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
@@ -340,7 +341,7 @@ private fun CoffeeGridItem(
 
             Text(
                 text = count.toString(),
-                color = Color(0xFF9CA3AF),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 14.sp
             )
         }
@@ -353,8 +354,8 @@ private fun SponsorTierRow(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) Color(0xFF10B981) else Color.Transparent
-    val backgroundColor = if (isSelected) Color(0xFF1A2E26) else Color(0xFF1E1E24)
+    val borderColor = if (isSelected) StudioSuccessGreen else Color.Transparent
+    val backgroundColor = if (isSelected) StudioSuccessGreen.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
 
     Box(
         modifier = Modifier
@@ -376,7 +377,7 @@ private fun SponsorTierRow(
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = tier.name,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )
@@ -387,12 +388,12 @@ private fun SponsorTierRow(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFF059669).copy(alpha = 0.3f))
+                            .background(StudioSuccessGreen.copy(alpha = 0.3f))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
                             text = "Populer",
-                            color = Color(0xFF34D399),
+                            color = StudioSuccessGreen,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -402,7 +403,7 @@ private fun SponsorTierRow(
 
                 Text(
                     text = tier.priceMonthly,
-                    color = Color(0xFF34D399),
+                    color = StudioSuccessGreen,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )

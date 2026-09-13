@@ -9,8 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 data class SettingsUiState(
-    val outputDirectoryPath: String = "/storage/emulated/0/Movies/LoopingVid",
-    val highQualityPreview: Boolean = true,
+    // Default export destination. One of the gallery locations offered in the export dialog
+    // (Downloads / Movies / Music / Documents). Used as the initial selection there.
+    val outputDirectoryPath: String = "Movies",
     val youtubeStreamKey: String = "",
     val tiktokStreamKey: String = "",
     val geminiApiKey: String = "",
@@ -47,10 +48,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             repository.setSetting("output_dir", path)
         }
-    }
-
-    fun toggleHighQualityPreview(enable: Boolean) {
-        _uiState.value = _uiState.value.copy(highQualityPreview = enable)
     }
 
     fun updateYoutubeKey(key: String) {

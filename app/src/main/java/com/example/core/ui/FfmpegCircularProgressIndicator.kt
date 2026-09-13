@@ -160,10 +160,7 @@ fun FfmpegCircularProgressIndicator(
                     // Percentage Readout
                     Text(
                         text = "${progress.coerceIn(0, 100)}%",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        ),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }

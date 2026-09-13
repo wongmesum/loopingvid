@@ -12,14 +12,12 @@ import org.junit.Test
 class LiveLogViewerTest {
 
     @Test
-    fun defaultUiState_containsInitialLogEvents() {
+    fun defaultUiState_startsWithNoFabricatedLogs() {
+        // Logs are populated only with REAL events (RTMP connect, bitrate changes, errors) as they
+        // happen. There are no pre-seeded "hardware initialized" entries for events that never
+        // occurred, so the list is empty on a fresh UI state.
         val state = LiveUiState()
-        assertTrue("Log list should not be empty initially", state.logs.isNotEmpty())
-        assertTrue("Should contain at least 4 initial logs", state.logs.size >= 4)
-        
-        val encoderLog = state.logs.firstOrNull { it.category == LiveLogCategory.ENCODER }
-        assertNotNull("Encoder log should be present", encoderLog)
-        assertEquals(LiveLogLevel.INFO, encoderLog?.level)
+        assertTrue("Log list should be empty until real stream events occur", state.logs.isEmpty())
     }
 
     @Test

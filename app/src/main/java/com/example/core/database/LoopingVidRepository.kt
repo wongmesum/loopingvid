@@ -1,6 +1,7 @@
 package com.example.core.database
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 class LoopingVidRepository(
     private val renderJobDao: RenderJobDao,
@@ -57,18 +58,46 @@ class LoopingVidRepository(
 
     suspend fun getJobById(id: Long): RenderJobEntity? = renderJobDao.getJobById(id)
 
+    // Background scope for the fire-and-forget "mark job as synced" write triggered from
+    // Firestore's success callback, which runs outside of any caller's coroutine (Firestore's
+    // listener callbacks execute on their own internal thread, not inside a suspend context).
+    private val syncFlagScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+
     suspend fun saveJob(job: RenderJobEntity): Long {
         val id = renderJobDao.insertJob(job)
         if (id > 0) {
             val savedJob = job.copy(id = id)
-            firestoreSyncManager?.syncRenderJobToFirestore(savedJob)
+            firestoreSyncManager?.syncRenderJobToFirestore(savedJob) { syncedJobId ->
+                syncFlagScope.launch { markJobSyncedToCloud(syncedJobId) }
+            }
         }
         return id
     }
 
     suspend fun updateJob(job: RenderJobEntity) {
         renderJobDao.updateJob(job)
-        firestoreSyncManager?.syncRenderJobToFirestore(job)
+        firestoreSyncManager?.syncRenderJobToFirestore(job) { syncedJobId ->
+            syncFlagScope.launch { markJobSyncedToCloud(syncedJobId) }
+        }
+    }
+
+    /**
+     * Marks a single job as successfully uploaded to Firestore, called only from the real
+     * upload success callback in [FirestoreJobHistorySyncManager.syncRenderJobToFirestore] -
+     * never speculatively - so [RenderJobEntity.isSyncedToCloud] reflects that specific job's
+     * actual cloud status instead of the app-wide sync indicator.
+     */
+    private suspend fun markJobSyncedToCloud(jobId: Long) {
+        try {
+            val current = renderJobDao.getJobById(jobId) ?: return
+            if (!current.isSyncedToCloud) {
+                // Direct DAO write (not updateJob()) - re-triggering another Firestore sync here
+                // for a flag-only local change would be pointless and could recurse.
+                renderJobDao.updateJob(current.copy(isSyncedToCloud = true))
+            }
+        } catch (_: Exception) {
+            // Best-effort: a failure to persist the flag doesn't affect the actual cloud upload.
+        }
     }
 
     suspend fun deleteJobById(id: Long) = renderJobDao.deleteJobById(id)

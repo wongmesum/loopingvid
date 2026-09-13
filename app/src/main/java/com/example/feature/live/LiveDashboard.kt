@@ -13,27 +13,31 @@ import com.patrykandpatrick.vico.compose.chart.Chart
 import com.patrykandpatrick.vico.compose.chart.line.lineChart
 import com.patrykandpatrick.vico.core.entry.FloatEntry
 import com.patrykandpatrick.vico.core.entry.ChartEntryModelProducer
-import kotlinx.coroutines.delay
 
+/**
+ * Live engagement dashboard. Renders the REAL concurrent-viewer history supplied by the
+ * platform API (currently YouTube Data API via [LiveViewModel]). When no live viewer data
+ * is available (unsupported platform or missing credentials), it clearly states so instead
+ * of fabricating numbers.
+ */
 @Composable
-fun LiveDashboard(modifier: Modifier = Modifier) {
+fun LiveDashboard(
+    viewerCount: Int,
+    viewerHistory: List<Int>,
+    isViewerCountLive: Boolean,
+    modifier: Modifier = Modifier
+) {
     val modelProducer = remember { ChartEntryModelProducer() }
-    var currentViewers by remember { mutableStateOf(0) }
-    
-    // Simulate real-time data
-    LaunchedEffect(Unit) {
-        var x = 0f
-        val entries = mutableListOf<FloatEntry>()
-        while (true) {
-            val y = (100..500).random().toFloat()
-            entries.add(FloatEntry(x, y))
-            if (entries.size > 20) {
-                entries.removeAt(0)
+
+    // Feed the chart from the real viewer history whenever it changes.
+    LaunchedEffect(viewerHistory) {
+        if (viewerHistory.isNotEmpty()) {
+            val entries = viewerHistory.mapIndexed { index, value ->
+                FloatEntry(index.toFloat(), value.toFloat())
             }
             modelProducer.setEntries(entries)
-            currentViewers = y.toInt()
-            x += 1f
-            delay(1000)
+        } else {
+            modelProducer.setEntries(emptyList<FloatEntry>())
         }
     }
 
@@ -60,23 +64,49 @@ fun LiveDashboard(modifier: Modifier = Modifier) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "🔴 LIVE: $currentViewers Viewers",
+                    text = if (isViewerCountLive) "🔴 LIVE: $viewerCount Viewers" else "Viewers: N/A",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.error,
+                    color = if (isViewerCountLive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.Bold
                 )
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Chart(
-                chart = lineChart(),
-                chartModelProducer = modelProducer,
-                startAxis = rememberStartAxis(),
-                bottomAxis = rememberBottomAxis(),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (!isViewerCountLive) {
+                Text(
+                    text = "Real viewer data is only available on YouTube with a Data API key + live video ID. " +
+                        "TikTok and custom RTMP do not expose a public viewer API.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (viewerHistory.isNotEmpty()) {
+                Chart(
+                    chart = lineChart(),
+                    chartModelProducer = modelProducer,
+                    startAxis = rememberStartAxis(),
+                    bottomAxis = rememberBottomAxis(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No viewer data yet",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

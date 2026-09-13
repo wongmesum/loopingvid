@@ -52,7 +52,7 @@ import androidx.compose.material.icons.filled.SignalCellular4Bar
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -111,7 +111,7 @@ enum class LiveToolCategory(
     AUDIO_MIXER("Audio Mixer", Icons.Default.Equalizer, "Master Volume, Bass & Equalizer"),
     TELEMETRY("Health & D3", Icons.Default.Speed, "Health Dashboard, Diagnostics & D3 Overlay"),
     SYSTEM_STATUS("System & Logs", Icons.Default.Info, "Thermal, Storage, Battery & Event Logs"),
-    ENGAGEMENT("Engagement", Icons.Default.TrendingUp, "Viewer count & Real-time Metrics"),
+    ENGAGEMENT("Engagement", Icons.AutoMirrored.Filled.TrendingUp, "Viewer count & Real-time Metrics"),
     ALL_TOOLS("All Tools", Icons.Default.FolderOpen, "View All Live Studio Panels")
 }
 
@@ -119,7 +119,7 @@ enum class LiveToolCategory(
  * LiveStreamingPage provides a complete live streaming control dashboard:
  * Organized in clean CapCut-Style Tool Categories with a pinned preview canvas.
  */
-@OptIn(ExperimentalAnimationApi::class)
+@OptIn(ExperimentalAnimationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun LiveStreamingPage(
     viewModel: LiveViewModel,
@@ -684,15 +684,24 @@ fun LiveStreamingPage(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
 
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                androidx.compose.foundation.layout.FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     LivePlatform.entries.forEach { platform ->
                                         FilterChip(
                                             selected = uiState.platform == platform,
                                             onClick = { viewModel.setPlatform(platform) },
-                                            label = { Text(platform.name.replace("_", " ")) },
+                                            label = {
+                                                Text(
+                                                    platform.name.replace("_", " "),
+                                                    maxLines = 1,
+                                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                )
+                                            },
                                             colors = FilterChipDefaults.filterChipColors(
                                                 selectedContainerColor = MaterialTheme.colorScheme.primary,
-                                                selectedLabelColor = Color.White
+                                                selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                                             ),
                                             modifier = Modifier.testTag("platform_chip_${platform.name}")
                                         )
@@ -979,7 +988,13 @@ fun LiveStreamingPage(
                         )
                     }
 
-                    LiveToolCategory.ENGAGEMENT -> { LiveDashboard() }
+                    LiveToolCategory.ENGAGEMENT -> {
+                        LiveDashboard(
+                            viewerCount = uiState.viewerCount,
+                            viewerHistory = uiState.viewerHistory,
+                            isViewerCountLive = uiState.isViewerCountLive
+                        )
+                    }
                     LiveToolCategory.ALL_TOOLS -> {
                         // All panels combined under section titles
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -1053,7 +1068,11 @@ fun LiveStreamingPage(
                             )
 
                             Text("6. Engagement & Metrics", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-                            LiveDashboard()
+                            LiveDashboard(
+                                viewerCount = uiState.viewerCount,
+                                viewerHistory = uiState.viewerHistory,
+                                isViewerCountLive = uiState.isViewerCountLive
+                            )
                         }
                     }
                 }
@@ -1298,6 +1317,7 @@ private fun formatStreamTime(seconds: Long): String {
 /**
  * Auto-Stop Stream Timer Configuration Card
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun AutoStopTimerCard(
     autoStopMinutes: Int,
@@ -1351,10 +1371,12 @@ fun AutoStopTimerCard(
                 }
             }
 
-            // Preset Chips
-            Row(
+            // Preset Chips. FlowRow so all 6 presets (including the longer "Continuous" label)
+            // wrap onto a second line on narrow phone screens instead of overflowing.
+            androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 val presets = listOf(
                     0 to "Continuous",
@@ -1369,10 +1391,10 @@ fun AutoStopTimerCard(
                     FilterChip(
                         selected = autoStopMinutes == mins,
                         onClick = { onAutoStopChange(mins) },
-                        label = { Text(label) },
+                        label = { Text(label, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = Color.White
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         modifier = Modifier.testTag("timer_preset_$mins")
                     )

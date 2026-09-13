@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -50,6 +52,7 @@ import androidx.compose.ui.unit.sp
 import java.util.Locale
 import kotlin.math.sin
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PrecisionVideoTrimControl(
     trimStartSec: Double,
@@ -73,7 +76,7 @@ fun PrecisionVideoTrimControl(
             .testTag("video_trim_control_card"),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(16.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF7C4DFF).copy(alpha = 0.4f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier
@@ -93,14 +96,19 @@ fun PrecisionVideoTrimControl(
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(
-                                Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF7C4DFF)))
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.secondary,
+                                        MaterialTheme.colorScheme.primary
+                                    )
+                                )
                             ),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCut,
                             contentDescription = "Trim Control",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -121,16 +129,15 @@ fun PrecisionVideoTrimControl(
 
                 // Active Loop Duration Pill
                 Surface(
-                    color = Color(0xFF00E5FF).copy(alpha = 0.15f),
+                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f))
                 ) {
                     Text(
                         text = "Loop Segment: %.1fs".format(Locale.US, loopDurationSec),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFF00E5FF),
-                        fontSize = 11.sp
+                        color = MaterialTheme.colorScheme.secondary
                     )
                 }
             }
@@ -143,15 +150,22 @@ fun PrecisionVideoTrimControl(
                         .fillMaxWidth()
                         .height(72.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF0F0C1B))
-                        .border(1.dp, Color(0xFF7C4DFF).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.background)
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                         .testTag("visual_segment_selector_canvas")
                 ) {
                     val startFrac = (effectiveStart / maxDurationSec).toFloat().coerceIn(0f, 1f)
                     val endFrac = (effectiveEnd / maxDurationSec).toFloat().coerceIn(0f, 1f)
                     val playheadFrac = (currentPosSec / maxDurationSec).toFloat().coerceIn(0f, 1f)
 
-                    // Waveform & Loop Segment Canvas
+                    // Waveform & Loop Segment Canvas. Uses theme tokens for the A/B markers
+                    // (secondary=gold for A, primary=purple for B) and the tertiary gold accent
+                    // for the playhead, so this stays on-theme instead of the old cyan/violet/red
+                    // palette that had no relation to the app's dark+gold scheme.
+                    val markerAColor = MaterialTheme.colorScheme.secondary
+                    val markerBColor = MaterialTheme.colorScheme.primary
+                    val playheadColor = MaterialTheme.colorScheme.tertiary
+                    val cutAreaColor = MaterialTheme.colorScheme.error
                     Canvas(modifier = Modifier.fillMaxSize()) {
                         val w = size.width
                         val h = size.height
@@ -168,9 +182,9 @@ fun PrecisionVideoTrimControl(
                             val barHeight = h * 0.6f * waveVal
 
                             val barColor = if (isInsideActive) {
-                                Color(0xFF00E5FF).copy(alpha = 0.85f)
+                                markerAColor.copy(alpha = 0.85f)
                             } else {
-                                Color(0xFF7C4DFF).copy(alpha = 0.25f)
+                                markerBColor.copy(alpha = 0.25f)
                             }
 
                             drawRoundRect(
@@ -181,17 +195,17 @@ fun PrecisionVideoTrimControl(
                             )
                         }
 
-                        // 2. Unselected Cut Areas (Dark Red/Purple tint)
+                        // 2. Unselected Cut Areas
                         if (startFrac > 0f) {
                             drawRect(
-                                color = Color(0xFFEF4444).copy(alpha = 0.2f),
+                                color = cutAreaColor.copy(alpha = 0.2f),
                                 topLeft = Offset(0f, 0f),
                                 size = Size(w * startFrac, h)
                             )
                         }
                         if (endFrac < 1f) {
                             drawRect(
-                                color = Color(0xFFEF4444).copy(alpha = 0.2f),
+                                color = cutAreaColor.copy(alpha = 0.2f),
                                 topLeft = Offset(w * endFrac, 0f),
                                 size = Size(w * (1f - endFrac), h)
                             )
@@ -203,8 +217,8 @@ fun PrecisionVideoTrimControl(
                             drawRect(
                                 brush = Brush.horizontalGradient(
                                     colors = listOf(
-                                        Color(0xFF00E5FF).copy(alpha = 0.25f),
-                                        Color(0xFF7C4DFF).copy(alpha = 0.35f)
+                                        markerAColor.copy(alpha = 0.25f),
+                                        markerBColor.copy(alpha = 0.35f)
                                     ),
                                     startX = w * startFrac,
                                     endX = w * endFrac
@@ -216,7 +230,7 @@ fun PrecisionVideoTrimControl(
 
                         // 4. Start Handle Line A
                         drawLine(
-                            color = Color(0xFF00E5FF),
+                            color = markerAColor,
                             start = Offset(w * startFrac, 0f),
                             end = Offset(w * startFrac, h),
                             strokeWidth = 3.dp.toPx()
@@ -224,23 +238,23 @@ fun PrecisionVideoTrimControl(
 
                         // 5. End Handle Line B
                         drawLine(
-                            color = Color(0xFF7C4DFF),
+                            color = markerBColor,
                             start = Offset(w * endFrac, 0f),
                             end = Offset(w * endFrac, h),
                             strokeWidth = 3.dp.toPx()
                         )
 
-                        // 6. Playhead Indicator Line (Yellow)
+                        // 6. Playhead Indicator Line
                         val playheadX = w * playheadFrac
                         drawLine(
-                            color = Color.Yellow,
+                            color = playheadColor,
                             start = Offset(playheadX, 0f),
                             end = Offset(playheadX, h),
                             strokeWidth = 2.dp.toPx(),
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 5f), 0f)
                         )
                         drawCircle(
-                            color = Color.Yellow,
+                            color = playheadColor,
                             radius = 5.dp.toPx(),
                             center = Offset(playheadX, 6.dp.toPx())
                         )
@@ -260,7 +274,7 @@ fun PrecisionVideoTrimControl(
                         },
                         valueRange = 0f..maxDurationSec.toFloat(),
                         colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFF00E5FF),
+                            thumbColor = MaterialTheme.colorScheme.secondary,
                             activeTrackColor = Color.Transparent,
                             inactiveTrackColor = Color.Transparent
                         ),
@@ -282,30 +296,27 @@ fun PrecisionVideoTrimControl(
                     Text(
                         text = "A: ${formatSeconds(effectiveStart)}",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFF00E5FF),
-                        fontSize = 11.sp
+                        color = MaterialTheme.colorScheme.secondary
                     )
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = CircleShape,
-                            color = Color.Yellow,
+                            color = MaterialTheme.colorScheme.tertiary,
                             modifier = Modifier.size(6.dp)
                         ) {}
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Playhead: ${formatSeconds(currentPosSec)}",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.Yellow,
-                            fontSize = 10.sp
+                            color = MaterialTheme.colorScheme.tertiary
                         )
                     }
 
                     Text(
                         text = "B: ${formatSeconds(effectiveEnd)}",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = Color(0xFF7C4DFF),
-                        fontSize = 11.sp
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -327,7 +338,7 @@ fun PrecisionVideoTrimControl(
                         Text(
                             text = formatSeconds(effectiveStart),
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF00E5FF),
+                            color = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.testTag("trim_start_value_text")
                         )
                     }
@@ -344,11 +355,11 @@ fun PrecisionVideoTrimControl(
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = Color(0xFF00E5FF),
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Start @ Playhead", fontSize = 11.sp)
+                        Text("Start @ Playhead", style = MaterialTheme.typography.labelMedium)
                     }
                 }
 
@@ -389,7 +400,7 @@ fun PrecisionVideoTrimControl(
                         Text(
                             text = formatSeconds(effectiveEnd),
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color(0xFF7C4DFF),
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.testTag("trim_end_value_text")
                         )
                     }
@@ -406,11 +417,11 @@ fun PrecisionVideoTrimControl(
                         Icon(
                             imageVector = Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = Color(0xFF7C4DFF),
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("End @ Playhead", fontSize = 11.sp)
+                        Text("End @ Playhead", style = MaterialTheme.typography.labelMedium)
                     }
                 }
 
@@ -441,26 +452,27 @@ fun PrecisionVideoTrimControl(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     FilterChip(
                         selected = (effectiveStart == 0.0 && effectiveEnd == maxDurationSec),
                         onClick = { onTrimChange(0.0, maxDurationSec) },
-                        label = { Text("Full Video", fontSize = 11.sp) },
+                        label = { Text("Full Video", style = MaterialTheme.typography.labelMedium) },
                         modifier = Modifier.testTag("trim_preset_full")
                     )
                     FilterChip(
                         selected = (effectiveStart == 0.0 && effectiveEnd == minOf(5.0, maxDurationSec)),
                         onClick = { onTrimChange(0.0, minOf(5.0, maxDurationSec)) },
-                        label = { Text("First 5s", fontSize = 11.sp) },
+                        label = { Text("First 5s", style = MaterialTheme.typography.labelMedium) },
                         modifier = Modifier.testTag("trim_preset_5s")
                     )
                     FilterChip(
                         selected = (effectiveStart == 0.0 && effectiveEnd == minOf(10.0, maxDurationSec)),
                         onClick = { onTrimChange(0.0, minOf(10.0, maxDurationSec)) },
-                        label = { Text("First 10s", fontSize = 11.sp) },
+                        label = { Text("First 10s", style = MaterialTheme.typography.labelMedium) },
                         modifier = Modifier.testTag("trim_preset_10s")
                     )
                     FilterChip(
@@ -471,7 +483,7 @@ fun PrecisionVideoTrimControl(
                             val e = minOf(maxDurationSec, mid + 5.0)
                             onTrimChange(s, e)
                         },
-                        label = { Text("Middle 10s", fontSize = 11.sp) },
+                        label = { Text("Middle 10s", style = MaterialTheme.typography.labelMedium) },
                         modifier = Modifier.testTag("trim_preset_middle")
                     )
                 }
@@ -497,8 +509,7 @@ private fun TrimStepperButton(
             text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-            color = MaterialTheme.colorScheme.onSurface,
-            fontSize = 11.sp
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }

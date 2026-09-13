@@ -98,7 +98,7 @@ enum class EditorToolCategory(val title: String, val icon: ImageVector, val desc
     MEDIA("Media", Icons.Default.Movie, "Video, Audio & PiP Overlays"),
     TRIM_SPEED("Trim & Speed", Icons.Default.ContentCut, "Trimmer, Retime & Transitions"),
     COLOR("Color & Filters", Icons.Default.Tune, "Color Grading & Presets"),
-    AUDIO_SPECTRUM("Audio & Spectrum", Icons.Default.GraphicEq, "Spectrum & Volume Mastering"),
+    AUDIO_SPECTRUM("Audio Mastering", Icons.Default.GraphicEq, "Volume & Audio Mastering"),
     TEXT_CAPTIONS("Text & Captions", Icons.Default.Edit, "Title, Watermark & AI SRT"),
     TEMPLATES("Templates & Queue", Icons.Default.AutoFixHigh, "Presets, Auto-Save & Queue"),
     ALL_TOOLS("All Tools", Icons.Default.FolderOpen, "View All Editing Panels")
@@ -212,19 +212,9 @@ fun EditorScreen(
             // Top Quick Export Button
             Button(
                 onClick = { 
-                    if (uiState.selectedMediaUri != null) {
-                        exportViewModel.showDialogForEditor("EditorProject", com.example.core.ui.ExportJobConfig.EditorJob(
-                            mediaUri = uiState.selectedMediaUri!!,
-                            audioUri = uiState.selectedAudioUri,
-                            titleText = uiState.titleText,
-                            watermarkText = uiState.watermarkText,
-                            spectrumStyle = uiState.spectrumStyle.name,
-                            presetQuality = uiState.presetQuality,
-                            ffmpegFilterString = uiState.colorGradingConfig.buildFfmpegFilterString(),
-                            audioMasteringPreset = uiState.audioMasteringPreset,
-                            overlayUri = uiState.selectedOverlayUri,
-                            overlayPosition = uiState.pipPosition.name
-                        ))
+                    val mediaUri = uiState.selectedMediaUri
+                    if (mediaUri != null) {
+                        exportViewModel.showDialogForEditor("EditorProject", buildEditorJobConfig(uiState, mediaUri))
                     }
                 },
                 enabled = uiState.selectedMediaUri != null && !uiState.jobProgress.isProcessing,
@@ -622,7 +612,6 @@ fun EditorScreen(
                                     viewModel.setTrim(uiState.trimStartSec, mid)
                                 },
                                 onDuplicateSegment = { viewModel.addLoopedSegment() },
-                                onDeleteSegment = { viewModel.setTrim(0.0, 10.0) },
                                 onResetTrim = { viewModel.setTrim(0.0, 30.0) }
                             )
 
@@ -653,7 +642,8 @@ fun EditorScreen(
                                 onSpeedChange = { viewModel.setPlaybackSpeed(it) },
                                 onResetSpeed = { viewModel.resetPlaybackSpeed() },
                                 baseDurationSec = uiState.transitionConfig.calculateTotalDurationSec(),
-                                queueViewModel = exportQueueViewModel
+                                queueViewModel = exportQueueViewModel,
+                                selectedMediaUri = uiState.selectedMediaUri
                             )
                         }
 
@@ -673,7 +663,8 @@ fun EditorScreen(
                                 onAddSegment = { viewModel.addLoopedSegment() },
                                 onRemoveSegment = { segId -> viewModel.removeLoopedSegment(segId) },
                                 onApplyGlobalEffect = { effect -> viewModel.applyGlobalTransitionEffect(effect) },
-                                queueViewModel = exportQueueViewModel
+                                queueViewModel = exportQueueViewModel,
+                                selectedMediaUri = uiState.selectedMediaUri
                             )
                         }
                     }
@@ -720,31 +711,6 @@ fun EditorScreen(
                     }
 
                     EditorToolCategory.AUDIO_SPECTRUM -> {
-                        // Collapsible Audio Spectrum Visualizer
-                        CollapsibleToolPanel(
-                            title = "Audio Spectrum Visualizer",
-                            icon = Icons.Default.GraphicEq,
-                            isExpanded = isAudioSpectrumPanelExpanded,
-                            onToggleExpand = { isAudioSpectrumPanelExpanded = !isAudioSpectrumPanelExpanded },
-                            statusBadgeText = uiState.visualizerMode.name
-                        ) {
-                            InteractiveAudioSpectrumCard(
-                                spectrumData = uiState.spectrumMagnitudes,
-                                isPlaying = uiState.isPreviewPlaying,
-                                peakDb = uiState.spectrumPeakDb,
-                                rmsEnergy = uiState.spectrumRmsEnergy,
-                                dominantFreqHz = uiState.spectrumDominantFreqHz,
-                                sensitivityGain = uiState.spectrumSensitivityGain,
-                                selectedMode = uiState.visualizerMode,
-                                selectedPalette = uiState.selectedPalette,
-                                bandCount = uiState.spectrumBandCount,
-                                onModeSelected = { viewModel.setVisualizerMode(it) },
-                                onPaletteSelected = { viewModel.setSpectrumPalette(it) },
-                                onSensitivityChange = { viewModel.setSpectrumSensitivity(it) },
-                                onBandCountChange = { viewModel.setSpectrumBandCount(it) }
-                            )
-                        }
-
                         // Collapsible Audio Mastering
                         CollapsibleToolPanel(
                             title = "Audio Mastering & EQ",
@@ -858,7 +824,8 @@ fun EditorScreen(
                                 onApplyTemplate = { viewModel.applyProjectTemplate(it) },
                                 onSaveCurrentAsTemplate = { name, desc, cat -> viewModel.saveCurrentAsTemplate(name, desc, cat) },
                                 onDeleteCustomTemplate = { viewModel.deleteCustomTemplate(it) },
-                                queueViewModel = exportQueueViewModel
+                                queueViewModel = exportQueueViewModel,
+                                selectedMediaUri = uiState.selectedMediaUri
                             )
                         }
 
@@ -972,7 +939,6 @@ fun EditorScreen(
                                         viewModel.setTrim(uiState.trimStartSec, mid)
                                     },
                                     onDuplicateSegment = { viewModel.addLoopedSegment() },
-                                    onDeleteSegment = { viewModel.setTrim(0.0, 10.0) },
                                     onResetTrim = { viewModel.setTrim(0.0, 30.0) }
                                 )
 
@@ -1020,33 +986,11 @@ fun EditorScreen(
                                     onSpeedChange = { viewModel.setPlaybackSpeed(it) },
                                     onResetSpeed = { viewModel.resetPlaybackSpeed() },
                                     baseDurationSec = uiState.transitionConfig.calculateTotalDurationSec(),
-                                    queueViewModel = exportQueueViewModel
+                                    queueViewModel = exportQueueViewModel,
+                                    selectedMediaUri = uiState.selectedMediaUri
                                 )
                             }
 
-                            CollapsibleToolPanel(
-                                title = "Audio Spectrum Visualizer",
-                                icon = Icons.Default.GraphicEq,
-                                isExpanded = isAudioSpectrumPanelExpanded,
-                                onToggleExpand = { isAudioSpectrumPanelExpanded = !isAudioSpectrumPanelExpanded },
-                                statusBadgeText = uiState.visualizerMode.name
-                            ) {
-                                InteractiveAudioSpectrumCard(
-                                    spectrumData = uiState.spectrumMagnitudes,
-                                    isPlaying = uiState.isPreviewPlaying,
-                                    peakDb = uiState.spectrumPeakDb,
-                                    rmsEnergy = uiState.spectrumRmsEnergy,
-                                    dominantFreqHz = uiState.spectrumDominantFreqHz,
-                                    sensitivityGain = uiState.spectrumSensitivityGain,
-                                    selectedMode = uiState.visualizerMode,
-                                    selectedPalette = uiState.selectedPalette,
-                                    bandCount = uiState.spectrumBandCount,
-                                    onModeSelected = { viewModel.setVisualizerMode(it) },
-                                    onPaletteSelected = { viewModel.setSpectrumPalette(it) },
-                                    onSensitivityChange = { viewModel.setSpectrumSensitivity(it) },
-                                    onBandCountChange = { viewModel.setSpectrumBandCount(it) }
-                                )
-                            }
                         }
                     }
                 }
@@ -1067,18 +1011,12 @@ fun EditorScreen(
             ) {
                 if (!uiState.jobProgress.isProcessing) {
                     Button(
-                        onClick = { exportViewModel.showDialogForEditor("EditorProject", com.example.core.ui.ExportJobConfig.EditorJob(
-                                mediaUri = uiState.selectedMediaUri!!,
-                                audioUri = uiState.selectedAudioUri,
-                                titleText = uiState.titleText,
-                                watermarkText = uiState.watermarkText,
-                                spectrumStyle = uiState.spectrumStyle.name,
-                                presetQuality = uiState.presetQuality,
-                                ffmpegFilterString = uiState.colorGradingConfig.buildFfmpegFilterString(),
-                                audioMasteringPreset = uiState.audioMasteringPreset,
-                                overlayUri = uiState.selectedOverlayUri,
-                                overlayPosition = uiState.pipPosition.name
-                            )) },
+                        onClick = {
+                            val mediaUri = uiState.selectedMediaUri
+                            if (mediaUri != null) {
+                                exportViewModel.showDialogForEditor("EditorProject", buildEditorJobConfig(uiState, mediaUri))
+                            }
+                        },
                         enabled = uiState.selectedMediaUri != null,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1098,6 +1036,22 @@ fun EditorScreen(
                         title = "FFmpeg Video Composition Export",
                         accentColor = MaterialTheme.colorScheme.primary
                     )
+                }
+
+                // Show the last render error persistently so failures are visible instead of silent.
+                uiState.jobProgress.errorMessage?.let { err ->
+                    Surface(
+                        color = MaterialTheme.colorScheme.errorContainer,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Export error: $err",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
                 }
 
                 AnimatedVisibility(visible = uiState.lastExportedOutputUri != null) {
@@ -1133,3 +1087,30 @@ fun EditorScreen(
     }
 }
 
+
+/**
+ * Assembles the editor export config from the current UI state so that trim, playback speed,
+ * and AI-generated captions are actually applied on export (not just in the preview).
+ */
+private fun buildEditorJobConfig(
+    uiState: EditorUiState,
+    mediaUri: String
+): com.example.core.ui.ExportJobConfig.EditorJob {
+    return com.example.core.ui.ExportJobConfig.EditorJob(
+        mediaUri = mediaUri,
+        audioUri = uiState.selectedAudioUri,
+        titleText = uiState.titleText,
+        watermarkText = uiState.watermarkText,
+        spectrumStyle = uiState.spectrumStyle.name,
+        presetQuality = uiState.presetQuality,
+        ffmpegFilterString = uiState.colorGradingConfig.buildFfmpegFilterString(),
+        audioMasteringPreset = uiState.audioMasteringPreset,
+        overlayUri = uiState.selectedOverlayUri,
+        overlayPosition = uiState.pipPosition.name,
+        playbackSpeed = uiState.playbackSpeed,
+        trimStartSec = uiState.trimStartSec,
+        trimEndSec = uiState.trimEndSec,
+        subtitleSrt = uiState.aiGeneratedCaptions.takeIf { it.isNotBlank() && !it.startsWith("Error") },
+        metadata = uiState.metadata
+    )
+}

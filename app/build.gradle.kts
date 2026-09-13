@@ -23,7 +23,10 @@ android {
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
     ndk {
-      abiFilters += listOf("armeabi-v7a", "x86")
+      // FFmpegKit ships native libraries for all common Android ABIs. Include the 64-bit
+      // architectures (arm64-v8a is required for modern devices and Play Store uploads)
+      // alongside the 32-bit ones for wider device coverage.
+      abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
     }
   }
 
@@ -61,6 +64,16 @@ android {
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+}
+
+// Robolectric 4.16 requires JDK 21 to run tests targeting Android SDK 36 (Baklava). The rest of
+// the build compiles fine on JDK 17, so we only pin the unit-test task's runtime to a JDK 21
+// toolchain. Gradle auto-provisions or reuses a locally installed JDK 21.
+val java21Launcher = javaToolchains.launcherFor {
+  languageVersion.set(JavaLanguageVersion.of(21))
+}
+tasks.withType<Test>().configureEach {
+  javaLauncher.set(java21Launcher)
 }
 
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
@@ -125,6 +138,10 @@ dependencies {
   implementation(libs.vico.compose.m3)
   implementation(libs.vico.core)
   implementation(libs.ffmpeg.kit.full)
+  // Java companion required by FFmpegKit's native layer (not pulled in transitively by the
+  // dev.ffmpegkit-maintained fork). Without it the engine throws NoClassDefFoundError on load.
+  implementation(libs.smart.exception.java)
+  implementation(libs.rootencoder.library)
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

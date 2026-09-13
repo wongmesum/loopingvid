@@ -74,7 +74,10 @@ data class BatchExportRequest(
     val isAutoLevelingEnabled: Boolean = false,
     val autoLevelingTargetLufs: Float = -14.0f,
     val fadeInSec: Float = 0f,
-    val fadeOutSec: Float = 0f
+    val fadeOutSec: Float = 0f,
+    val playbackSpeed: Float = 1.0f,
+    val trimStartSec: Double = 0.0,
+    val trimEndSec: Double = 0.0
 )
 
 class ExportQueueViewModel(
@@ -85,6 +88,10 @@ class ExportQueueViewModel(
 
     private val _uiState = MutableStateFlow(ExportQueueUiState())
     val uiState: StateFlow<ExportQueueUiState> = _uiState.asStateFlow()
+
+    // Retains the original input Data for each enqueued work request so a failed job can be
+    // retried with its full parameters (WorkInfo only exposes progress/output, not input).
+    private val inputDataByWorkId = mutableMapOf<UUID, Data>()
 
     companion object {
         const val UNIQUE_QUEUE_NAME = "sequential_video_export_queue"
@@ -181,6 +188,8 @@ class ExportQueueViewModel(
             .addTag(QUEUE_TAG)
             .build()
 
+        inputDataByWorkId[workRequest.id] = inputData
+
         workManager.beginUniqueWork(
             UNIQUE_QUEUE_NAME,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
@@ -194,20 +203,26 @@ class ExportQueueViewModel(
     fun enqueueBatchProjects(requests: List<BatchExportRequest>) {
         if (requests.isEmpty()) return
 
+        val firstData = buildDataFromRequest(requests.first())
+        val firstRequest = OneTimeWorkRequestBuilder<VideoExportWorker>()
+            .setInputData(firstData)
+            .addTag(QUEUE_TAG)
+            .build()
+        inputDataByWorkId[firstRequest.id] = firstData
+
         var continuation = workManager.beginUniqueWork(
             UNIQUE_QUEUE_NAME,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
-            OneTimeWorkRequestBuilder<VideoExportWorker>()
-                .setInputData(buildDataFromRequest(requests.first()))
-                .addTag(QUEUE_TAG)
-                .build()
+            firstRequest
         )
 
         for (i in 1 until requests.size) {
+            val data = buildDataFromRequest(requests[i])
             val workRequest = OneTimeWorkRequestBuilder<VideoExportWorker>()
-                .setInputData(buildDataFromRequest(requests[i]))
+                .setInputData(data)
                 .addTag(QUEUE_TAG)
                 .build()
+            inputDataByWorkId[workRequest.id] = data
             continuation = continuation.then(workRequest)
         }
 
@@ -243,7 +258,10 @@ class ExportQueueViewModel(
             VideoExportWorker.KEY_AUTO_LEVELING_ENABLED to request.isAutoLevelingEnabled,
             VideoExportWorker.KEY_AUTO_LEVELING_TARGET_LUFS to request.autoLevelingTargetLufs,
             VideoExportWorker.KEY_FADE_IN_SEC to request.fadeInSec,
-            VideoExportWorker.KEY_FADE_OUT_SEC to request.fadeOutSec
+            VideoExportWorker.KEY_FADE_OUT_SEC to request.fadeOutSec,
+            VideoExportWorker.KEY_PLAYBACK_SPEED to request.playbackSpeed,
+            VideoExportWorker.KEY_TRIM_START_SEC to request.trimStartSec,
+            VideoExportWorker.KEY_TRIM_END_SEC to request.trimEndSec
         )
     }
 
@@ -262,13 +280,24 @@ class ExportQueueViewModel(
     }
 
     /**
-     * Retries a failed export job by re-enqueueing it.
+     * Retries a failed export job by re-enqueueing it with its ORIGINAL input parameters.
+     * WorkInfo does not expose the input Data, so we look it up from [inputDataByWorkId];
+     * this fixes retries that previously re-ran with empty progress data and failed instantly.
      */
     fun retryFailedExport(item: QueueItemUiState) {
+        val originalInput = inputDataByWorkId[item.id]
+        if (originalInput == null) {
+            // Without the original input we cannot faithfully retry; skip rather than enqueue
+            // a broken job with empty parameters.
+            return
+        }
+
         val workRequest = OneTimeWorkRequestBuilder<VideoExportWorker>()
-            .setInputData(item.rawData)
+            .setInputData(originalInput)
             .addTag(QUEUE_TAG)
             .build()
+
+        inputDataByWorkId[workRequest.id] = originalInput
 
         workManager.beginUniqueWork(
             UNIQUE_QUEUE_NAME,

@@ -30,9 +30,11 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.Button
@@ -50,6 +52,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,6 +75,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.database.CloudSyncState
+import com.example.ui.theme.ElegantGoldDim
+import com.example.ui.theme.StudioSuccessGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -120,13 +125,14 @@ fun MediaThumbnailImage(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF1E1B3A))
-            .border(1.dp, Color(0xFF7C4DFF).copy(alpha = 0.35f), RoundedCornerShape(8.dp)),
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
-        if (bitmap != null) {
+        val currentBitmap = bitmap
+        if (currentBitmap != null) {
             Image(
-                bitmap = bitmap!!.asImageBitmap(),
+                bitmap = currentBitmap.asImageBitmap(),
                 contentDescription = "Media Thumbnail",
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
@@ -139,7 +145,7 @@ fun MediaThumbnailImage(
                 Icon(
                     imageVector = placeholderIcon,
                     contentDescription = "Media Placeholder",
-                    tint = Color(0xFF00E5FF),
+                    tint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -147,12 +153,14 @@ fun MediaThumbnailImage(
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel,
     onNavigateToGoLive: (sourceUri: String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     val filteredJobs = if (uiState.selectedFilterType == "ALL") {
         uiState.renderJobs
@@ -201,9 +209,9 @@ fun HistoryScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag("firestore_sync_card"),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF14102B)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             shape = RoundedCornerShape(16.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF7C4DFF).copy(alpha = 0.4f))
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
         ) {
             Column(
                 modifier = Modifier
@@ -221,7 +229,12 @@ fun HistoryScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .background(
-                                    Brush.linearGradient(listOf(Color(0xFF00E5FF), Color(0xFF7C4DFF))),
+                                    Brush.linearGradient(
+                                        listOf(
+                                            MaterialTheme.colorScheme.secondary,
+                                            MaterialTheme.colorScheme.primary
+                                        )
+                                    ),
                                     CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -233,7 +246,7 @@ fun HistoryScreen(
                                     else -> Icons.Default.Cloud
                                 },
                                 contentDescription = "Cloud Sync Status",
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -243,14 +256,14 @@ fun HistoryScreen(
                                 Text(
                                     text = "Firebase Firestore Sync",
                                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Surface(
                                     color = when (uiState.syncInfo.syncState) {
-                                        CloudSyncState.SYNCED -> Color(0xFF00E676).copy(alpha = 0.2f)
-                                        CloudSyncState.SYNCING -> Color(0xFF00E5FF).copy(alpha = 0.2f)
-                                        else -> Color.Gray.copy(alpha = 0.2f)
+                                        CloudSyncState.SYNCED -> StudioSuccessGreen.copy(alpha = 0.2f)
+                                        CloudSyncState.SYNCING -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f)
                                     },
                                     shape = RoundedCornerShape(6.dp)
                                 ) {
@@ -259,18 +272,17 @@ fun HistoryScreen(
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                                         color = when (uiState.syncInfo.syncState) {
-                                            CloudSyncState.SYNCED -> Color(0xFF00E676)
-                                            CloudSyncState.SYNCING -> Color(0xFF00E5FF)
-                                            else -> Color.LightGray
-                                        },
-                                        fontSize = 10.sp
+                                            CloudSyncState.SYNCED -> StudioSuccessGreen
+                                            CloudSyncState.SYNCING -> MaterialTheme.colorScheme.secondary
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
                                     )
                                 }
                             }
                             Text(
                                 text = "Device: ${uiState.syncInfo.currentDeviceId}",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -280,15 +292,15 @@ fun HistoryScreen(
                         Text(
                             text = if (uiState.syncInfo.isAutoSyncEnabled) "Auto Sync" else "Off",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (uiState.syncInfo.isAutoSyncEnabled) Color(0xFF00E5FF) else Color.Gray,
+                            color = if (uiState.syncInfo.isAutoSyncEnabled) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(end = 4.dp)
                         )
                         Switch(
                             checked = uiState.syncInfo.isAutoSyncEnabled,
                             onCheckedChange = { viewModel.toggleAutoCloudSync() },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFF00E5FF)
+                                checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                checkedTrackColor = MaterialTheme.colorScheme.secondary
                             ),
                             modifier = Modifier.testTag("toggle_cloud_sync_switch")
                         )
@@ -302,7 +314,7 @@ fun HistoryScreen(
                 ) {
                     Surface(
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFF1E1B3A),
+                        color = MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Row(
@@ -310,14 +322,14 @@ fun HistoryScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Synced Records:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                            Text("${uiState.syncInfo.totalSyncedCount}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = Color.White)
+                            Text("Synced Records:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${uiState.syncInfo.totalSyncedCount}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
 
                     Surface(
                         modifier = Modifier.weight(1f),
-                        color = Color(0xFF1E1B3A),
+                        color = MaterialTheme.colorScheme.surface,
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Row(
@@ -325,8 +337,8 @@ fun HistoryScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Linked Devices:", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                            Text("${uiState.syncInfo.remoteDeviceCount}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = Color(0xFF00E5FF))
+                            Text("Linked Devices:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("${uiState.syncInfo.remoteDeviceCount}", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.secondary)
                         }
                     }
                 }
@@ -343,19 +355,18 @@ fun HistoryScreen(
                         else
                             "Real-time Firestore listener active",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray,
-                        fontSize = 11.sp
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     OutlinedButton(
                         onClick = { viewModel.triggerManualCloudSync() },
                         modifier = Modifier.testTag("manual_cloud_sync_button"),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF00E5FF))
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.secondary)
                     ) {
                         Icon(imageVector = Icons.Default.Refresh, contentDescription = "Sync", modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Sync Now", fontSize = 12.sp)
+                        Text("Sync Now", style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -388,12 +399,15 @@ fun HistoryScreen(
 
         if (uiState.selectedTab == 0) {
             // Filter Chips for Jobs
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 listOf("ALL", "LOOP", "MASTERING", "EDITOR").forEach { type ->
                     FilterChip(
                         selected = uiState.selectedFilterType == type,
                         onClick = { viewModel.setFilterType(type) },
-                        label = { Text(type) },
+                        label = { Text(type, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                         modifier = Modifier.testTag("filter_chip_$type")
                     )
                 }
@@ -437,17 +451,34 @@ fun HistoryScreen(
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(job.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                                             Spacer(modifier = Modifier.height(2.dp))
+                                            // Cloud badge reflects THIS job's own isSyncedToCloud flag
+                                            // (set only after a real per-job Firestore upload success -
+                                            // see LoopingVidRepository.markJobSyncedToCloud). Previously
+                                            // this read the app-wide syncInfo.syncState, so every job in
+                                            // the list showed the same badge regardless of whether it
+                                            // individually reached the cloud.
+                                            val isCloudSynced = job.isSyncedToCloud
+                                            val badgeColor = if (isCloudSynced) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurfaceVariant
                                             Surface(
-                                                color = Color(0xFF00E5FF).copy(alpha = 0.15f),
+                                                color = badgeColor.copy(alpha = 0.15f),
                                                 shape = RoundedCornerShape(4.dp)
                                             ) {
                                                 Row(
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Icon(imageVector = Icons.Default.CloudDone, contentDescription = null, tint = Color(0xFF00E5FF), modifier = Modifier.size(12.dp))
+                                                    Icon(
+                                                        imageVector = if (isCloudSynced) Icons.Default.CloudDone else Icons.Default.Cloud,
+                                                        contentDescription = null,
+                                                        tint = badgeColor,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
                                                     Spacer(modifier = Modifier.width(4.dp))
-                                                    Text("Synced to Firestore", fontSize = 10.sp, color = Color(0xFF00E5FF), fontWeight = FontWeight.Bold)
+                                                    Text(
+                                                        if (isCloudSynced) "Synced to Firestore" else "Local only",
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = badgeColor
+                                                    )
                                                 }
                                             }
                                         }
@@ -456,7 +487,7 @@ fun HistoryScreen(
                                         onClick = { viewModel.deleteJob(job.id) },
                                         modifier = Modifier.testTag("delete_job_${job.id}")
                                     ) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Job", tint = Color.Gray)
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Job", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
 
@@ -464,23 +495,72 @@ fun HistoryScreen(
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // Job status chip (colored) so FAILED/PROCESSING/CANCELLED are visible.
+                                    val statusColor = when (job.status) {
+                                        "COMPLETED" -> StudioSuccessGreen
+                                        "PROCESSING" -> MaterialTheme.colorScheme.secondary
+                                        "FAILED" -> MaterialTheme.colorScheme.error
+                                        "CANCELLED" -> ElegantGoldDim
+                                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                    }
+                                    Surface(color = statusColor.copy(alpha = 0.15f), shape = RoundedCornerShape(4.dp)) {
+                                        Text(
+                                            job.status,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                            color = statusColor
+                                        )
+                                    }
                                     Text("Size: %.1f MB".format(job.fileSizeMb), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                                    Text(formatTimestamp(job.createdAt), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    Text(formatTimestamp(job.createdAt), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
 
                                 if (job.status == "COMPLETED") {
-                                    Button(
-                                        onClick = { onNavigateToGoLive(job.outputUri) },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .testTag("go_live_history_${job.id}"),
-                                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Icon(imageVector = Icons.Default.Radio, contentDescription = "Go Live")
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Go Live with this Media", color = Color.Black, fontWeight = FontWeight.Bold)
+                                        // Share the exported output file.
+                                        OutlinedButton(
+                                            onClick = { shareMediaFile(context, job.outputUri) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("share_history_${job.id}")
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Share, contentDescription = "Share", modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Share", style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        // Edit the output file's title/artist/album/genre/year/comment
+                                        // tags in place (lossless remux, MP3/WAV/M4A/MP4/MKV/MOV).
+                                        OutlinedButton(
+                                            onClick = { viewModel.openMetadataEditor(job) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("edit_metadata_${job.id}")
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Info, contentDescription = "Edit Metadata", modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Metadata", style = MaterialTheme.typography.labelMedium)
+                                        }
+                                        Button(
+                                            onClick = { onNavigateToGoLive(job.outputUri) },
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .testTag("go_live_history_${job.id}"),
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.Radio, contentDescription = "Go Live", modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                "Go Live",
+                                                color = MaterialTheme.colorScheme.onSecondary,
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -531,11 +611,10 @@ fun HistoryScreen(
                                         }
                                     }
                                     IconButton(onClick = { viewModel.deleteLiveSession(session.id) }) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Session", tint = Color.Gray)
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Session", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
 
-                                Text("Platform: ${session.platform} | Total Loops: ${session.totalLoops}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text("Duration: ${session.durationSec}s | Avg Bitrate: ${session.avgBitrateKbps} kbps", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
                             }
                         }
@@ -547,10 +626,10 @@ fun HistoryScreen(
             if (uiState.jobHistoryLogs.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(imageVector = Icons.Default.Terminal, contentDescription = null, modifier = Modifier.size(48.dp), tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.Terminal, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("No synced execution logs recorded yet.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Perform video renders or audio mastering to generate logs.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        Text("Perform video renders or audio mastering to generate logs.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             } else {
@@ -588,11 +667,11 @@ fun HistoryScreen(
                                         Spacer(modifier = Modifier.width(10.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(history.title, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                                            Text("Type: ${history.taskType} | Status: ${history.status}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                            Text("Type: ${history.taskType} | Status: ${history.status}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         }
                                     }
                                     IconButton(onClick = { viewModel.deleteJobHistoryLog(history.id) }) {
-                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Log", tint = Color.Gray)
+                                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Log", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
 
@@ -606,7 +685,7 @@ fun HistoryScreen(
                                         onClick = { showLogsDetails = !showLogsDetails },
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
-                                        Text(if (showLogsDetails) "Hide Logs" else "View Logs", fontSize = 11.sp)
+                                        Text(if (showLogsDetails) "Hide Logs" else "View Logs", style = MaterialTheme.typography.labelMedium)
                                     }
                                 }
 
@@ -615,14 +694,14 @@ fun HistoryScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(top = 6.dp),
-                                        color = Color(0xFF0A0814),
+                                        color = MaterialTheme.colorScheme.background,
                                         shape = RoundedCornerShape(8.dp)
                                     ) {
                                         Text(
                                             text = history.executionLogs.ifBlank { "Task completed with zero errors." },
                                             modifier = Modifier.padding(10.dp),
                                             style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                                            color = Color(0xFF00E5FF)
+                                            color = MaterialTheme.colorScheme.secondary
                                         )
                                     }
                                 }
@@ -633,10 +712,95 @@ fun HistoryScreen(
             }
         }
     }
+
+    // Metadata editor dialog: lets the user set title/artist/album/genre/year/comment on an
+    // already-exported MP3/WAV/M4A/MP4/MKV/MOV file, applied via a lossless FFmpeg remux.
+    uiState.metadataEditJob?.let { job ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { if (!uiState.isMetadataEditSaving) viewModel.dismissMetadataEditor() },
+            title = { Text("Edit Metadata") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = job.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (uiState.isMetadataEditLoading) {
+                        Text(
+                            text = "Reading current tags...",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                    com.example.feature.mastering.AudioMetadataEditorCard(
+                        metadata = uiState.metadataEditValues,
+                        onMetadataChanged = { viewModel.updateMetadataEditValues(it) }
+                    )
+                    uiState.metadataEditResultMessage?.let { msg ->
+                        Text(
+                            text = msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.saveMetadataEdit() },
+                    enabled = !uiState.isMetadataEditSaving
+                ) {
+                    Text(if (uiState.isMetadataEditSaving) "Saving..." else "Save")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { viewModel.dismissMetadataEditor() },
+                    enabled = !uiState.isMetadataEditSaving
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 private fun formatTimestamp(timeMs: Long): String {
     val sdf = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
     return sdf.format(Date(timeMs))
+}
+
+/**
+ * Shares an exported media file with other apps via a FileProvider content Uri. Falls back
+ * gracefully (no crash) if the path is blank/missing or no share target exists.
+ */
+private fun shareMediaFile(context: android.content.Context, path: String?) {
+    if (path.isNullOrBlank()) return
+    try {
+        val file = java.io.File(path)
+        if (!file.exists()) return
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        val mime = when (file.extension.lowercase()) {
+            "mp3", "wav", "m4a" -> "audio/*"
+            else -> "video/*"
+        }
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = mime
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            android.content.Intent.createChooser(intent, "Share media").apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+    } catch (e: Exception) {
+        // Sharing is best-effort; never crash the History screen on failure.
+    }
 }
 

@@ -45,10 +45,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.ui.theme.StudioSuccessGreen
 
 data class OnboardingStep(
     val stepIndex: Int,
@@ -214,13 +216,14 @@ fun OnboardingOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xF0090D16))
+            .background(MaterialTheme.colorScheme.background.copy(alpha = 0.94f))
             .clickable(
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                 indication = null
             ) { /* Block touches to underlying UI components */ }
             .testTag("onboarding_overlay_container")
     ) {
+            val spotlightColor = MaterialTheme.colorScheme.primary
             // Scrim & Canvas Spotlight Highlight
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val canvasWidth = size.width
@@ -242,8 +245,8 @@ fun OnboardingOverlay(
                 drawCircle(
                     brush = Brush.radialGradient(
                         colors = listOf(
-                            Color(0xFF38BDF8).copy(alpha = 0.45f),
-                            Color(0xFF0284C7).copy(alpha = 0.15f),
+                            spotlightColor.copy(alpha = 0.45f),
+                            spotlightColor.copy(alpha = 0.15f),
                             Color.Transparent
                         ),
                         center = Offset(centerX, centerY),
@@ -252,7 +255,7 @@ fun OnboardingOverlay(
                 )
 
                 drawCircle(
-                    color = Color(0xFF38BDF8),
+                    color = spotlightColor,
                     center = Offset(centerX, centerY),
                     radius = 45f * pulseScale,
                     style = Stroke(width = 4f)
@@ -270,8 +273,8 @@ fun OnboardingOverlay(
             ) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFF0284C7).copy(alpha = 0.25f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8))
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -281,14 +284,13 @@ fun OnboardingOverlay(
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
-                            tint = Color(0xFF38BDF8),
+                            tint = MaterialTheme.colorScheme.secondary,
                             modifier = Modifier.size(16.dp)
                         )
                         Text(
                             text = "PANDUAN STUDIO INTERAKTIF",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
@@ -300,7 +302,7 @@ fun OnboardingOverlay(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Tutup Panduan",
-                        tint = Color.White
+                        tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -311,9 +313,9 @@ fun OnboardingOverlay(
                     .fillMaxWidth(0.92f)
                     .align(Alignment.Center)
                     .testTag("onboarding_coachmark_card"),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                 shape = RoundedCornerShape(24.dp),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF38BDF8).copy(alpha = 0.6f))
+                border = androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f))
             ) {
                 Column(
                     modifier = Modifier
@@ -330,26 +332,24 @@ fun OnboardingOverlay(
                         ) {
                             Text(
                                 text = "LANGKAH ${currentStep.stepIndex} DARI ${currentStep.totalSteps}",
-                                color = Color(0xFF38BDF8),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.secondary
                             )
                             Text(
                                 text = "${(currentStep.stepIndex * 100) / currentStep.totalSteps}%",
-                                color = Color(0xFF94A3B8),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
                         LinearProgressIndicator(
-                            progress = currentStep.stepIndex / currentStep.totalSteps.toFloat(),
+                            progress = { currentStep.stepIndex / currentStep.totalSteps.toFloat() },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
-                            color = Color(0xFF38BDF8),
-                            trackColor = Color(0xFF334155)
+                            color = MaterialTheme.colorScheme.secondary,
+                            trackColor = MaterialTheme.colorScheme.outlineVariant
                         )
                     }
 
@@ -360,15 +360,15 @@ fun OnboardingOverlay(
                     ) {
                         Surface(
                             shape = CircleShape,
-                            color = Color(0xFF0284C7).copy(alpha = 0.25f),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
                             modifier = Modifier.size(48.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8))
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = currentStep.icon,
                                     contentDescription = currentStep.moduleTitle,
-                                    tint = Color(0xFF38BDF8),
+                                    tint = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(26.dp)
                                 )
                             }
@@ -377,33 +377,30 @@ fun OnboardingOverlay(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = currentStep.moduleTitle,
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = currentStep.moduleSubtitle,
-                                color = Color(0xFF94A3B8),
-                                fontSize = 12.sp
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    Divider(color = Color(0xFF334155))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
                     // Step Detail Title & Description
                     Text(
                         text = currentStep.title,
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
                     )
 
                     Text(
                         text = currentStep.description,
-                        color = Color(0xFFCBD5E1),
-                        fontSize = 13.sp,
-                        lineHeight = 19.sp
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
                     // Highlights Bullet List
@@ -416,14 +413,13 @@ fun OnboardingOverlay(
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
                                     contentDescription = null,
-                                    tint = Color(0xFF10B981),
+                                    tint = StudioSuccessGreen,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = feature,
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium),
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -445,7 +441,7 @@ fun OnboardingOverlay(
                                     .size(if (active) 10.dp else 6.dp)
                                     .clip(CircleShape)
                                     .background(
-                                        if (active) Color(0xFF38BDF8) else Color(0xFF475569)
+                                        if (active) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.outlineVariant
                                     )
                             )
                         }
@@ -477,7 +473,7 @@ fun OnboardingOverlay(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Kembali", fontSize = 13.sp)
+                                Text("Kembali", style = MaterialTheme.typography.labelLarge)
                             }
                         } else {
                             TextButton(
@@ -486,7 +482,7 @@ fun OnboardingOverlay(
                                     .weight(1f)
                                     .testTag("onboarding_skip_text_button")
                             ) {
-                                Text("Lompati", color = Color(0xFF94A3B8), fontSize = 13.sp)
+                                Text("Lompati", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
                             }
                         }
 
@@ -503,14 +499,13 @@ fun OnboardingOverlay(
                             modifier = Modifier
                                 .weight(1.2f)
                                 .testTag("onboarding_next_button"),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                             shape = RoundedCornerShape(12.dp)
                         ) {
                             Text(
                                 text = if (safeIndex == steps.size - 1) "Mulai Jelajah" else "Lanjut",
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSecondary
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Icon(

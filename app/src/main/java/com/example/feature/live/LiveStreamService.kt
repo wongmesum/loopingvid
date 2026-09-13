@@ -53,9 +53,16 @@ class LiveStreamService : Service() {
             .setOngoing(true)
             .build()
 
+        // The live service holds the camera and microphone for RTMP capture.
+        val liveServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        } else {
+            0
+        }
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                startForeground(NOTIFICATION_ID, notification, liveServiceType)
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
@@ -63,7 +70,7 @@ class LiveStreamService : Service() {
             e.printStackTrace()
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                    startForeground(NOTIFICATION_ID, notification, liveServiceType)
                 } else {
                     startForeground(NOTIFICATION_ID, notification)
                 }

@@ -21,6 +21,8 @@ dependencyResolutionManagement {
     google()
     mavenCentral()
     maven { url = uri("https://jcenter.bintray.com") }
+    // JitPack hosts the RootEncoder (RTMP/RTSP/SRT) streaming library.
+    maven { url = uri("https://jitpack.io") }
   }
 }
 

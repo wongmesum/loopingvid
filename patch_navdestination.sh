@@ -1,1 +1,0 @@
-sed -i 's/object About : NavDestination("about", "Tentang", Icons.Default.Info, "tab_about")/object About : NavDestination("about", "Tentang", Icons.Default.Info, "tab_about")\n    object Privacy : NavDestination("privacy", "Kebijakan Privasi", Icons.Default.Info, "tab_privacy")/g' app/src/main/java/com/example/ui/navigation/NavDestination.kt

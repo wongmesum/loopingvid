@@ -11,10 +11,11 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -90,6 +91,14 @@ fun MainScreen(
         com.example.core.media.ProjectAutoSaveService.updateActiveProjectState(editorUiState)
     }
 
+    // Collected purely to observe validationError for the global error dialog below (task
+    // "buat popup kesalahan ... terapkan secara global"). Each feature ViewModel already
+    // populates this field in its render/export/start guard clause instead of silently
+    // returning (e.g. "Render" tapped with no video selected).
+    val loopUiState by loopViewModel.uiState.collectAsState()
+    val masteringUiState by masteringViewModel.uiState.collectAsState()
+    val liveUiState by liveViewModel.uiState.collectAsState()
+
     androidx.compose.runtime.LaunchedEffect(Unit) {
         com.example.core.media.ProjectAutoSaveService.startService(context)
         if (autoSaveManager.isUnexpectedClosureDetected()) {
@@ -149,7 +158,7 @@ fun MainScreen(
                             modifier = Modifier.testTag("main_onboarding_tour_button")
                         ) {
                             Icon(
-                                imageVector = Icons.Default.HelpOutline,
+                                imageVector = Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = "Panduan Interaktif",
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -170,7 +179,7 @@ fun MainScreen(
                                     showMenu = false
                                     startOnboardingTour()
                                 },
-                                leadingIcon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null) },
                                 modifier = Modifier.testTag("menu_item_onboarding")
                             )
                             DropdownMenuItem(
@@ -344,8 +353,7 @@ fun MainScreen(
                         navController.navigate(NavDestination.About.route)
                     },
                     onNavigateToSupport = {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.facebook.com/share/1LwG2YHbik/"))
-                        navController.context.startActivity(intent)
+                        navController.navigate(NavDestination.SupportProject.route)
                     },
                     onRestartOnboarding = ::startOnboardingTour
                 )
@@ -359,8 +367,7 @@ fun MainScreen(
                         navController.popBackStack()
                     },
                     onNavigateToSupport = {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://www.facebook.com/share/1LwG2YHbik/"))
-                        navController.context.startActivity(intent)
+                        navController.navigate(NavDestination.SupportProject.route)
                     },
                     onStartOnboarding = ::startOnboardingTour
                 )
@@ -399,13 +406,57 @@ fun MainScreen(
                 exportViewModel.dismissDialog()
             },
             defaultFileName = exportState.fileName,
-            availableFormats = exportState.availableFormats
+            availableFormats = exportState.availableFormats,
+            defaultDestination = exportState.selectedDestination,
+            metadata = exportState.metadata,
+            onMetadataChanged = { exportViewModel.updateMetadata(it) }
         )
 
         com.example.core.ui.ExportSummaryDialog(
             summaryData = exportState.completedExportSummary,
             onDismiss = { exportViewModel.dismissSummary() }
         )
+
+        // Global validation error dialog: shown whenever a "Render"/"Export"/"Start Live" action
+        // was tapped without a required input (e.g. no video/audio selected), or a Live start
+        // failed. A single AlertDialog here covers all 4 features instead of separate dialogs
+        // per screen, per the "terapkan secara global" requirement. Checked in a fixed order;
+        // only one message is shown at a time since these guard clauses fire synchronously on
+        // a single button tap.
+        val globalValidationError = loopUiState.validationError
+            ?: masteringUiState.validationError
+            ?: editorUiState.validationError
+            ?: liveUiState.validationError
+        if (globalValidationError != null) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = {
+                    loopViewModel.consumeValidationError()
+                    masteringViewModel.consumeValidationError()
+                    editorViewModel.consumeValidationError()
+                    liveViewModel.consumeValidationError()
+                },
+                icon = {
+                    androidx.compose.material3.Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                title = { Text("Tidak Bisa Melanjutkan") },
+                text = { Text(globalValidationError) },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        loopViewModel.consumeValidationError()
+                        masteringViewModel.consumeValidationError()
+                        editorViewModel.consumeValidationError()
+                        liveViewModel.consumeValidationError()
+                    }) {
+                        Text("OK")
+                    }
+                },
+                modifier = Modifier.testTag("global_validation_error_dialog")
+            )
+        }
 
         com.example.core.ui.OnboardingOverlay(
             showOnboarding = showOnboarding,

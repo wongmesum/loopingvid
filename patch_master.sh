@@ -1,4 +1,0 @@
-sed -i 's/fun MasteringScreen(/fun MasteringScreen(\n    exportViewModel: com.example.core.ui.ExportViewModel,/g' app/src/main/java/com/example/feature/mastering/MasteringScreen.kt
-sed -i '/var showExportDialog/d' app/src/main/java/com/example/feature/mastering/MasteringScreen.kt
-sed -i 's/showExportDialog = true/exportViewModel.showDialogForMastering("MasteredAudio", com.example.core.ui.ExportJobConfig.MasteringJob(\n                                inputUri = uiState.selectedAudioUri!!,\n                                presetName = uiState.selectedPreset.name,\n                                targetLufs = uiState.targetLufs\n                            ))/g' app/src/main/java/com/example/feature/mastering/MasteringScreen.kt
-sed -i '/ExportDialog(/,+9d' app/src/main/java/com/example/feature/mastering/MasteringScreen.kt

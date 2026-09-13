@@ -1,15 +1,17 @@
 package com.example.core.ui
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import com.example.core.media.AudioMetadata
+import com.example.feature.mastering.AudioMetadataEditorCard
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ExportDialog(
     showDialog: Boolean,
@@ -17,13 +19,17 @@ fun ExportDialog(
     onConfirm: (fileName: String, format: String, destination: String, resolution: String, frameRate: String, bitrate: String, aspectRatio: String) -> Unit,
     onEnqueue: ((fileName: String, format: String, destination: String, resolution: String, frameRate: String, bitrate: String, aspectRatio: String) -> Unit)? = null,
     defaultFileName: String,
-    availableFormats: List<String>
+    availableFormats: List<String>,
+    defaultDestination: String = "Downloads",
+    // ID3/container metadata (title/artist/album/genre/year/comment/cover art), collected here
+    // at export time instead of always-visible on the source screen's main page.
+    metadata: AudioMetadata = AudioMetadata(),
+    onMetadataChanged: (AudioMetadata) -> Unit = {}
 ) {
     if (showDialog) {
-        val coroutineScope = rememberCoroutineScope()
         var fileName by remember { mutableStateOf(defaultFileName) }
         var selectedFormat by remember { mutableStateOf(if (availableFormats.isNotEmpty()) availableFormats[0] else "") }
-        var selectedDestination by remember { mutableStateOf("Downloads") }
+        var selectedDestination by remember(defaultDestination) { mutableStateOf(defaultDestination) }
         var selectedResolution by remember { mutableStateOf("1080p") }
         var selectedFrameRate by remember { mutableStateOf("30fps") }
         var selectedBitrate by remember { mutableStateOf("Medium") }
@@ -48,7 +54,12 @@ fun ExportDialog(
             onDismissRequest = onDismiss,
             title = { Text("Simpan Sebagai / Ekspor") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 480.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                     OutlinedTextField(
                         value = fileName,
                         onValueChange = { fileName = it },
@@ -71,7 +82,7 @@ fun ExportDialog(
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                             )
                             ExposedDropdownMenu(
                                 expanded = expanded,
@@ -102,7 +113,10 @@ fun ExportDialog(
                         }
                     }
 
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                             availableFormats.forEach { format ->
                                 FilterChip(
                                     selected = selectedFormat == format,
@@ -125,7 +139,7 @@ fun ExportDialog(
                                 onValueChange = {},
                                 readOnly = true,
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                modifier = Modifier.menuAnchor().fillMaxWidth()
+                                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                             )
                             ExposedDropdownMenu(
                                 expanded = expanded,
@@ -160,7 +174,7 @@ fun ExportDialog(
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
                                     expanded = expanded,
@@ -192,7 +206,7 @@ fun ExportDialog(
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
                                     expanded = expanded,
@@ -229,7 +243,7 @@ fun ExportDialog(
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
                                     expanded = expanded,
@@ -260,7 +274,7 @@ fun ExportDialog(
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
                                     expanded = expanded,
@@ -280,25 +294,34 @@ fun ExportDialog(
                             }
                         }
                     }
+
+                    // ID3/container metadata (title/artist/album/genre/year/comment/cover art),
+                    // collected here at export time. Optional; blank fields are skipped by
+                    // FFmpeg's `-metadata`.
+                    AudioMetadataEditorCard(
+                        metadata = metadata,
+                        onMetadataChanged = onMetadataChanged
+                    )
                 }
             },
             confirmButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (onEnqueue != null) {
                         OutlinedButton(onClick = {
-                            coroutineScope.launch(Dispatchers.Default) {
-                                onEnqueue(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
-                            }
-                            onDismiss()
+                            // Call directly (synchronously). The handler reads the job config and
+                            // dismisses the dialog itself. Do NOT launch async + dismiss here: that
+                            // races the dialog's dismiss (which nulls currentJobConfig) ahead of the
+                            // handler reading it, causing the export to silently no-op.
+                            onEnqueue(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
                         }) {
                             Text("Antrekan")
                         }
                     }
                     Button(onClick = {
-                        coroutineScope.launch(Dispatchers.Default) {
-                            onConfirm(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
-                        }
-                        onDismiss()
+                        // Call directly (synchronously); confirmExport() reads currentJobConfig and
+                        // dismisses the dialog itself. Launching async and dismissing here caused a
+                        // race that nulled the config before it was read -> "nothing happens".
+                        onConfirm(fileName, selectedFormat, selectedDestination, selectedResolution, selectedFrameRate, selectedBitrate, selectedAspectRatio)
                     }) {
                         Text("Ekspor Sekarang")
                     }

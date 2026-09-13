@@ -16,8 +16,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Redo
-import androidx.compose.material.icons.filled.Undo
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -71,7 +71,7 @@ fun UndoRedoBar(
                     modifier = Modifier.testTag("undo_action_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Undo,
+                        imageVector = Icons.AutoMirrored.Filled.Undo,
                         contentDescription = "Undo Action",
                         tint = if (state.canUndo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                         modifier = Modifier.size(22.dp)
@@ -85,7 +85,7 @@ fun UndoRedoBar(
                     modifier = Modifier.testTag("redo_action_button")
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Redo,
+                        imageVector = Icons.AutoMirrored.Filled.Redo,
                         contentDescription = "Redo Action",
                         tint = if (state.canRedo) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                         modifier = Modifier.size(22.dp)

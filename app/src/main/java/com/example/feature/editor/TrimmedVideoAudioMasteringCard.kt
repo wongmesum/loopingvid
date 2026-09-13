@@ -18,8 +18,6 @@ import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -45,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import com.example.core.ui.ExportJobConfig
 import com.example.core.ui.ExportViewModel
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun TrimmedVideoAudioMasteringCard(
     mediaUri: String?,
@@ -64,17 +63,14 @@ fun TrimmedVideoAudioMasteringCard(
     val effectiveEnd = if (trimEndSec > trimStartSec) trimEndSec else (trimStartSec + 15.0)
     val durationSec = (effectiveEnd - trimStartSec).coerceAtLeast(0.1)
 
-    Card(
+    // No outer Card here: this composable's only call site (EditorScreen's AUDIO_SPECTRUM tab)
+    // already wraps it in a CollapsibleToolPanel, which renders its own surfaceVariant Card.
+    // Adding a second identically-colored Card on top produced a visible "card inside card"
+    // double border with no added visual hierarchy.
+    Column(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-        shape = RoundedCornerShape(16.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -122,18 +118,26 @@ fun TrimmedVideoAudioMasteringCard(
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Row(
+                androidx.compose.foundation.layout.FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     presets.forEach { preset ->
                         FilterChip(
                             selected = selectedPreset == preset,
                             onClick = { selectedPreset = preset },
-                            label = { Text(preset, style = MaterialTheme.typography.labelSmall) },
+                            label = {
+                                Text(
+                                    preset,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.secondary,
-                                selectedLabelColor = Color.Black
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondary
                             ),
                             modifier = Modifier.testTag("preset_chip_${preset.replace(" ", "_")}")
                         )
@@ -158,9 +162,10 @@ fun TrimmedVideoAudioMasteringCard(
                     )
                 }
 
-                Row(
+                androidx.compose.foundation.layout.FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     lufsPresets.forEach { lufs ->
                         FilterChip(
@@ -169,7 +174,7 @@ fun TrimmedVideoAudioMasteringCard(
                             label = { Text("${lufs.toInt()} LUFS") },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.tertiary,
-                                selectedLabelColor = Color.White
+                                selectedLabelColor = MaterialTheme.colorScheme.onTertiary
                             ),
                             modifier = Modifier.testTag("lufs_chip_${lufs.toInt()}")
                         )
@@ -213,15 +218,16 @@ fun TrimmedVideoAudioMasteringCard(
                 Icon(
                     imageVector = Icons.Default.Equalizer,
                     contentDescription = "Export Trimmed Master",
-                    tint = Color.Black
+                    tint = MaterialTheme.colorScheme.onSecondary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Export Mastered & Normalized Trimmed Video",
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onSecondary,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                 )
             }
-        }
     }
 }

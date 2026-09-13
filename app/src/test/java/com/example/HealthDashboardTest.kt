@@ -9,16 +9,19 @@ import org.junit.Test
 class HealthDashboardTest {
 
     @Test
-    fun defaultLiveUiState_hasValidHealthScoreAndMetrics() {
+    fun defaultLiveUiState_startsWithHonestZeroedMetrics() {
+        // Before streaming there is no real telemetry, so all measured metrics default to 0 and
+        // histories are empty. Nothing is fabricated. Only targetBitrateKbps has a real default
+        // (the recommended target the encoder will aim for once streaming begins).
         val uiState = LiveUiState()
-        assertEquals(98, uiState.healthScorePct)
-        assertEquals(4500, uiState.currentBitrateKbps)
+        assertEquals(0, uiState.healthScorePct)
+        assertEquals(0, uiState.currentBitrateKbps)
         assertEquals(4500, uiState.targetBitrateKbps)
         assertEquals(0, uiState.droppedFrames)
-        assertEquals(120, uiState.latencyMs)
-        assertEquals(6, uiState.jitterMs)
-        assertTrue(uiState.bitrateHistory.isNotEmpty())
-        assertTrue(uiState.rttHistory.isNotEmpty())
+        assertEquals(0, uiState.latencyMs)
+        assertEquals(0, uiState.jitterMs)
+        assertTrue("bitrate history starts empty until real onNewBitrate callbacks arrive", uiState.bitrateHistory.isEmpty())
+        assertTrue("rtt history starts empty (RTT is not reported by the RTMP client)", uiState.rttHistory.isEmpty())
     }
 
     @Test

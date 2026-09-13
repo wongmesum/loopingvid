@@ -16,28 +16,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import android.widget.Toast
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.Print
-import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -57,6 +49,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     viewModel: SettingsViewModel,
@@ -67,7 +60,6 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
-    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -131,32 +123,32 @@ fun SettingsScreen(
             ) {
                 Text("Storage & Performance", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
 
-                OutlinedTextField(
-                    value = uiState.outputDirectoryPath,
-                    onValueChange = { viewModel.updateOutputDirectory(it) },
-                    label = { Text("Default Export Directory") },
+                Text(
+                    "Default Export Location",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "Used as the initial gallery location in the export dialog. You can still change it per export.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                androidx.compose.foundation.layout.FlowRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("output_dir_input"),
-                    singleLine = true
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("High Quality Canvas Preview", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                        Text("Renders high-FPS audio spectrum preview", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    listOf("Downloads", "Movies", "Music", "Documents").forEach { dest ->
+                        FilterChip(
+                            selected = uiState.outputDirectoryPath == dest,
+                            onClick = { viewModel.updateOutputDirectory(dest) },
+                            label = { Text(dest, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) }
+                        )
                     }
-                    Switch(
-                        checked = uiState.highQualityPreview,
-                        onCheckedChange = { viewModel.toggleHighQualityPreview(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.testTag("hq_preview_switch")
-                    )
                 }
+
             }
         }
 
@@ -308,78 +300,6 @@ fun SettingsScreen(
             }
         }
 
-        // File Management Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(imageVector = Icons.Default.FolderOpen, contentDescription = "File Management", tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Manajemen File", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Baru", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Baru")
-                    }
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Buka", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Buka")
-                    }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Buka dari penyimpanan", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Penyimpanan")
-                    }
-                    FilledTonalButton(onClick = { Toast.makeText(context, "File terbaru", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.History, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Terbaru")
-                    }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Simpan", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Simpan")
-                    }
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Simpan sebagai", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.Save, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Simpan sbg")
-                    }
-                }
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Bagikan file", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Bagikan")
-                    }
-                    FilledTonalButton(onClick = { Toast.makeText(context, "Cetak", Toast.LENGTH_SHORT).show() }, modifier = Modifier.weight(1f)) {
-                        Icon(imageVector = Icons.Default.Print, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cetak")
-                    }
-                }
-            }
-        }
-
         // About & Support Card
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -404,7 +324,7 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .testTag("settings_restart_onboarding_button")
                 ) {
-                    Icon(imageVector = Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(imageVector = Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Ulangi Panduan Interaktif Studio")
                 }
