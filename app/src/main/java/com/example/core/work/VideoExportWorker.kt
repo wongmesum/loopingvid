@@ -1,8 +1,15 @@
 package com.example.core.work
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.ServiceInfo
 import android.net.Uri
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.core.database.AppDatabase
@@ -10,7 +17,6 @@ import com.example.core.database.LoopingVidRepository
 import com.example.core.database.RenderJobEntity
 import com.example.core.ffmpeg.MediaProcessor
 import com.example.core.utils.MediaStoreExporter
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -49,15 +55,63 @@ class VideoExportWorker(
         const val KEY_AUTO_LEVELING_TARGET_LUFS = "KEY_AUTO_LEVELING_TARGET_LUFS"
         const val KEY_FADE_IN_SEC = "KEY_FADE_IN_SEC"
         const val KEY_FADE_OUT_SEC = "KEY_FADE_OUT_SEC"
+        const val KEY_PLAYBACK_SPEED = "KEY_PLAYBACK_SPEED"
+        const val KEY_TRIM_START_SEC = "KEY_TRIM_START_SEC"
+        const val KEY_TRIM_END_SEC = "KEY_TRIM_END_SEC"
 
         const val KEY_PROGRESS = "KEY_PROGRESS"
         const val KEY_STATUS = "KEY_STATUS"
         const val KEY_GALLERY_URI = "KEY_GALLERY_URI"
         const val KEY_ERROR = "KEY_ERROR"
+
+        private const val EXPORT_CHANNEL_ID = "video_export_channel"
+        private const val EXPORT_NOTIFICATION_ID = 2001
+    }
+
+    /**
+     * Provides the foreground notification so long FFmpeg exports run as expedited/foreground
+     * work and are not killed by the OS while the app is backgrounded.
+     */
+    override suspend fun getForegroundInfo(): ForegroundInfo {
+        return createForegroundInfo("Preparing export...")
+    }
+
+    private fun createForegroundInfo(status: String): ForegroundInfo {
+        val context = applicationContext
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(
+                EXPORT_CHANNEL_ID,
+                "Video Export",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { description = "Background video/audio export progress" }
+            manager.createNotificationChannel(channel)
+        }
+
+        val notification: Notification = NotificationCompat.Builder(context, EXPORT_CHANNEL_ID)
+            .setContentTitle("LoopingVid Export")
+            .setContentText(status)
+            .setSmallIcon(android.R.drawable.stat_sys_download)
+            .setOngoing(true)
+            .build()
+
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ForegroundInfo(EXPORT_NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+        } else {
+            ForegroundInfo(EXPORT_NOTIFICATION_ID, notification)
+        }
     }
 
     override suspend fun doWork(): Result {
         val context = applicationContext
+
+        // Promote to a foreground service so long exports survive app backgrounding.
+        try {
+            setForeground(createForegroundInfo("Exporting video..."))
+        } catch (_: Throwable) {
+            // If the OS declines foreground promotion (e.g. background start limits), continue anyway.
+        }
+
         val title = inputData.getString(KEY_PROJECT_TITLE) ?: "EditedProject_${System.currentTimeMillis()}"
         val jobType = inputData.getString(KEY_JOB_TYPE) ?: "EDITOR"
         val format = inputData.getString(KEY_EXPORT_FORMAT) ?: "mp4"
@@ -80,6 +134,9 @@ class VideoExportWorker(
         val frameRateStr = inputData.getString(KEY_FRAME_RATE) ?: "30fps"
         val bitrateStr = inputData.getString(KEY_BITRATE) ?: "Medium"
         val aspectRatioStr = inputData.getString(KEY_ASPECT_RATIO) ?: "Asli"
+        val playbackSpeedVal = inputData.getFloat(KEY_PLAYBACK_SPEED, 1.0f)
+        val trimStartVal = inputData.getDouble(KEY_TRIM_START_SEC, 0.0)
+        val trimEndVal = inputData.getDouble(KEY_TRIM_END_SEC, 0.0)
 
         val repository = LoopingVidRepository(
             AppDatabase.getDatabase(context).renderJobDao(),
@@ -137,7 +194,12 @@ class VideoExportWorker(
                         fadeOutSec = inputData.getFloat(KEY_FADE_OUT_SEC, 0f)
                     )
                 }
-                else -> { // "EDITOR" or others
+                // Editor-family jobs. BATCH_COLOR_GRADING / TRANSITION_RENDER / TEMPLATE_EXPORT /
+                // SPEED_RETIME all encode an edited video where the specific operation is expressed
+                // through the FFmpeg filter string (built by their respective control cards), so they
+                // are correctly handled by the editor processor. They are listed explicitly so the
+                // routing is intentional rather than an implicit fall-through.
+                "EDITOR", "BATCH_COLOR_GRADING", "TRANSITION_RENDER", "TEMPLATE_EXPORT", "SPEED_RETIME" -> {
                     mediaProcessor.executeEditorJob(
                         mediaUri = inputUriStr,
                         audioUri = audioUriStr,
@@ -154,7 +216,34 @@ class VideoExportWorker(
                         resolution = resolutionStr,
                         frameRate = frameRateStr,
                         bitrate = bitrateStr,
-                        aspectRatio = aspectRatioStr
+                        aspectRatio = aspectRatioStr,
+                        playbackSpeed = playbackSpeedVal,
+                        trimStartSec = trimStartVal,
+                        trimEndSec = trimEndVal
+                    )
+                }
+                else -> {
+                    // Unknown job type: default to the editor pipeline so nothing silently drops.
+                    mediaProcessor.executeEditorJob(
+                        mediaUri = inputUriStr,
+                        audioUri = audioUriStr,
+                        titleText = titleTextStr,
+                        watermarkText = watermarkTextStr,
+                        spectrumStyle = spectrumStyleStr,
+                        presetQuality = presetQualityStr,
+                        filterString = ffmpegFilterStr,
+                        customFileName = title,
+                        destinationFolder = folder,
+                        exportFormat = format,
+                        overlayUri = overlayUriStr,
+                        overlayPosition = overlayPositionStr,
+                        resolution = resolutionStr,
+                        frameRate = frameRateStr,
+                        bitrate = bitrateStr,
+                        aspectRatio = aspectRatioStr,
+                        playbackSpeed = playbackSpeedVal,
+                        trimStartSec = trimStartVal,
+                        trimEndSec = trimEndVal
                     )
                 }
             }

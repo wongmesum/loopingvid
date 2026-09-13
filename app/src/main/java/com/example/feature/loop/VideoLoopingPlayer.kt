@@ -35,14 +35,14 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeDown
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeDown
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -70,7 +70,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -86,6 +85,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.core.media.AudioSpectrumVisualizer
+import com.example.ui.theme.StudioSuccessGreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import java.util.Locale
@@ -364,7 +364,7 @@ fun VideoLoopingPlayer(
                     .fillMaxWidth()
                     .height(240.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color.Black)
+                    .background(MaterialTheme.colorScheme.background)
                     .testTag("loop_player_viewport"),
                 contentAlignment = Alignment.Center
             ) {
@@ -376,14 +376,14 @@ fun VideoLoopingPlayer(
                         Icon(
                             imageVector = Icons.Default.Movie,
                             contentDescription = null,
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = "Select a video to enable ExoPlayer segment looping",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 } else if (errorMessage != null) {
@@ -420,7 +420,7 @@ fun VideoLoopingPlayer(
                                 .fillMaxWidth()
                                 .height(36.dp)
                                 .align(Alignment.BottomCenter)
-                                .background(Color.Black.copy(alpha = 0.4f))
+                                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.4f))
                                 .padding(horizontal = 12.dp)
                         ) {
                             AudioSpectrumVisualizer(
@@ -431,7 +431,7 @@ fun VideoLoopingPlayer(
 
                         // Loop Status Floating Badge
                         Surface(
-                            color = Color.Black.copy(alpha = 0.75f),
+                            color = MaterialTheme.colorScheme.background.copy(alpha = 0.75f),
                             shape = RoundedCornerShape(20.dp),
                             modifier = Modifier
                                 .align(Alignment.TopStart)
@@ -443,14 +443,14 @@ fun VideoLoopingPlayer(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = if (isPlaying) Color(0xFF22C55E) else Color(0xFFEF4444),
+                                    color = if (isPlaying) StudioSuccessGreen else MaterialTheme.colorScheme.error,
                                     modifier = Modifier.size(8.dp)
                                 ) {}
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (loopMode == "SEAMLESS_CLIP") "ExoPlayer A-B Seamless" else "Full Video Loop",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onBackground
                                 )
                             }
                         }
@@ -485,7 +485,7 @@ fun VideoLoopingPlayer(
                         modifier = Modifier.testTag("loop_player_toggle_mute")
                     ) {
                         Icon(
-                            imageVector = if (isMuted) Icons.Default.VolumeOff else if (volumeLevel > 0.5f) Icons.Default.VolumeUp else Icons.Default.VolumeDown,
+                            imageVector = if (isMuted) Icons.AutoMirrored.Filled.VolumeOff else if (volumeLevel > 0.5f) Icons.AutoMirrored.Filled.VolumeUp else Icons.AutoMirrored.Filled.VolumeDown,
                             contentDescription = "Mute Toggle",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -523,7 +523,7 @@ fun VideoLoopingPlayer(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Segment Selection & Trimming Range Controls
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

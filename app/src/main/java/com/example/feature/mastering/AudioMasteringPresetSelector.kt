@@ -36,7 +36,7 @@ import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -224,10 +224,12 @@ fun AudioMasteringPresetSelector(
                 }
             }
 
-            // Save Custom Preset Dialog Expansion
+            // Save Custom Preset Dialog Expansion. Uses Surface (not Card) since it already
+            // lives inside this composable's outer Card - a second Card here produced a visible
+            // double border ("card inside card") with no added hierarchy.
             AnimatedVisibility(visible = showSaveDialog) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth().testTag("save_custom_preset_card")
                 ) {
@@ -549,7 +551,7 @@ private fun rememberPresetIcon(name: String, category: String): ImageVector {
         name.contains("Bass", ignoreCase = true) -> Icons.Default.GraphicEq
         name.contains("Voice", ignoreCase = true) || name.contains("Vocal", ignoreCase = true) -> Icons.Default.RecordVoiceOver
         name.contains("Noise", ignoreCase = true) -> Icons.Default.NoiseAware
-        name.contains("Loudness", ignoreCase = true) -> Icons.Default.VolumeUp
+        name.contains("Loudness", ignoreCase = true) -> Icons.AutoMirrored.Filled.VolumeUp
         name.contains("Cinematic", ignoreCase = true) -> Icons.Default.Movie
         category.contains("Beats", ignoreCase = true) -> Icons.Default.Headset
         else -> Icons.Default.Tune

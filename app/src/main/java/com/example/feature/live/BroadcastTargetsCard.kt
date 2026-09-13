@@ -239,11 +239,14 @@ fun BroadcastTargetsCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.NetworkCheck,
-                            contentDescription = "Run Speed Test",
+                            contentDescription = "Simulate Speed Test",
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Test Speed", fontSize = 11.sp)
+                        // Label made explicit: this generates a randomized estimate for
+                        // simulcast bandwidth validation, not a real upload speed measurement
+                        // (no network probe is performed).
+                        Text("Simulate Speed", fontSize = 11.sp)
                     }
                 }
 

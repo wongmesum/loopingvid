@@ -43,7 +43,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,6 +86,7 @@ fun SegmentTransitionControlCard(
     onRemoveSegment: (segmentId: String) -> Unit,
     onApplyGlobalEffect: (effect: TransitionEffect) -> Unit,
     queueViewModel: ExportQueueViewModel?,
+    selectedMediaUri: String? = null,
     modifier: Modifier = Modifier
 ) {
     var activePreviewEffect by remember { mutableStateOf(transitionConfig.globalTransitionEffect) }
@@ -165,7 +166,7 @@ fun SegmentTransitionControlCard(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Live Transition Animation Canvas Preview
             Column(
@@ -251,7 +252,7 @@ fun SegmentTransitionControlCard(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // Interactive Segment Timeline Chain
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -352,21 +353,26 @@ fun SegmentTransitionControlCard(
                 }
             }
 
-            // Enqueue / Render Button
+            // Enqueue / Render Button.
+            // NOTE: A true multi-segment xfade needs a multi-input filter_complex pipeline that
+            // the single-input editor renderer does not provide. We therefore enqueue a valid
+            // re-encode of the selected clip (transitions applied in preview only) rather than
+            // sending an unusable multi-input xfade graph into -vf (which would fail). Requires a
+            // selected media clip.
             Button(
                 onClick = {
-                    if (queueViewModel != null) {
+                    if (queueViewModel != null && !selectedMediaUri.isNullOrBlank()) {
                         val batchRequest = BatchExportRequest(
-                            title = "Multi-Segment Transition Render (${transitionConfig.segments.size} Segments)",
+                            title = "Segment Render (${transitionConfig.segments.size} Segments)",
                             jobType = "TRANSITION_RENDER",
                             format = "mp4",
                             destinationFolder = "Movies/Transitions",
-                            ffmpegFilterString = filterGraph
+                            inputUri = selectedMediaUri
                         )
                         queueViewModel.enqueueProjectExport(batchRequest)
                     }
                 },
-                enabled = queueViewModel != null,
+                enabled = queueViewModel != null && !selectedMediaUri.isNullOrBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)

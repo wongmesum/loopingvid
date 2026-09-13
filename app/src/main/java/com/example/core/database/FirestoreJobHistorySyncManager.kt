@@ -189,7 +189,14 @@ class FirestoreJobHistorySyncManager(
         }
     }
 
-    suspend fun syncRenderJobToFirestore(job: RenderJobEntity) = withContext(Dispatchers.IO) {
+    /**
+     * Uploads [job] to Firestore. [onJobSynced] fires only once this SPECIFIC job's document
+     * write actually succeeds, so the caller (repository) can persist a per-job synced flag
+     * instead of relying on the app-wide [FirestoreSyncInfo.syncState] - previously the History
+     * screen's per-job "Synced to Firestore" badge read that global state, so every job in the
+     * list showed the same badge regardless of whether it individually reached the cloud.
+     */
+    suspend fun syncRenderJobToFirestore(job: RenderJobEntity, onJobSynced: ((Long) -> Unit)? = null) = withContext(Dispatchers.IO) {
         if (!_syncInfo.value.isAutoSyncEnabled || !isFirestoreAvailable) return@withContext
         try {
             _syncInfo.value = _syncInfo.value.copy(syncState = CloudSyncState.SYNCING)
@@ -223,6 +230,7 @@ class FirestoreJobHistorySyncManager(
                         lastSyncedTimeMs = System.currentTimeMillis(),
                         errorMessage = null
                     )
+                    onJobSynced?.invoke(job.id)
                 }
                 .addOnFailureListener { err ->
                     _syncInfo.value = _syncInfo.value.copy(

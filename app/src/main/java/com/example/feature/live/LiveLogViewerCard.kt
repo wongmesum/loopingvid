@@ -66,6 +66,7 @@ import kotlinx.coroutines.launch
  * Log viewer component in LiveStreamingPage that displays a scrollable list of real-time events
  * such as encoder initialization, network reconnect attempts, and stream health status messages.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun LiveLogViewerCard(
     logs: List<LiveLogEvent>,
@@ -214,18 +215,20 @@ fun LiveLogViewerCard(
                 shape = RoundedCornerShape(10.dp)
             )
 
-            // Category Filter Chips
-            Row(
+            // Category Filter Chips. FlowRow so all 6 category chips wrap onto a second line
+            // on narrow phone screens instead of overflowing off-screen.
+            androidx.compose.foundation.layout.FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 FilterChip(
                     selected = selectedCategoryFilter == null,
                     onClick = { selectedCategoryFilter = null },
-                    label = { Text("ALL", fontSize = 10.sp) },
+                    label = { Text("ALL", style = MaterialTheme.typography.labelSmall) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = Color.White
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                     ),
                     modifier = Modifier.testTag("log_category_chip_all")
                 )
@@ -237,10 +240,10 @@ fun LiveLogViewerCard(
                         onClick = {
                             selectedCategoryFilter = if (isSelected) null else category
                         },
-                        label = { Text(category.label, fontSize = 10.sp) },
+                        label = { Text(category.label, style = MaterialTheme.typography.labelSmall) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = Color.White
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                         ),
                         modifier = Modifier.testTag("log_category_chip_${category.name}")
                     )

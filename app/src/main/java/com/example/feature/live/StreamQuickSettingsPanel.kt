@@ -39,8 +39,8 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -61,11 +61,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.ElegantGoldDim
+import com.example.ui.theme.StudioSuccessGreen
 
 /**
  * Quick Expandable / Slide-Out Stream Settings Panel.
@@ -96,16 +97,16 @@ fun StreamQuickSettingsPanel(
                 width = 1.dp,
                 brush = Brush.horizontalGradient(
                     colors = if (isExpanded) {
-                        listOf(Color(0xFF8B5CF6), Color(0xFF06B6D4))
+                        listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                     } else {
-                        listOf(Color(0xFF374151), Color(0xFF1F2937))
+                        listOf(MaterialTheme.colorScheme.outline, MaterialTheme.colorScheme.surfaceVariant)
                     }
                 ),
                 shape = RoundedCornerShape(16.dp)
             )
             .testTag("stream_quick_settings_panel"),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF130F26)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
@@ -133,7 +134,7 @@ fun StreamQuickSettingsPanel(
                             .clip(CircleShape)
                             .background(
                                 Brush.linearGradient(
-                                    colors = listOf(Color(0xFF8B5CF6), Color(0xFF6366F1))
+                                    colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.secondary)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -141,7 +142,7 @@ fun StreamQuickSettingsPanel(
                         Icon(
                             imageVector = Icons.Default.Tune,
                             contentDescription = "Quick Stream Controls",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -150,12 +151,12 @@ fun StreamQuickSettingsPanel(
                         Text(
                             text = "Quick Stream Controls",
                             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (isExpanded) "Tap to collapse quick panel" else "Camera focus • Audio mute • Stream resolution",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -168,21 +169,21 @@ fun StreamQuickSettingsPanel(
                     if (!isExpanded) {
                         // Resolution Badge
                         Surface(
-                            color = Color(0xFF1E1B4B),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(6.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = 0.5f))
+                            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                         ) {
                             Text(
                                 text = uiState.streamResolution.badge,
                                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = Color(0xFF818CF8),
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
 
                         // Mute Indicator Badge
                         Surface(
-                            color = if (uiState.isQuickMuted || uiState.isMasterMuted) Color(0xFF7F1D1D) else Color(0xFF064E3B),
+                            color = if (uiState.isQuickMuted || uiState.isMasterMuted) MaterialTheme.colorScheme.error.copy(alpha = 0.3f) else StudioSuccessGreen.copy(alpha = 0.25f),
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Row(
@@ -192,14 +193,14 @@ fun StreamQuickSettingsPanel(
                                 Icon(
                                     imageVector = if (uiState.isQuickMuted || uiState.isMasterMuted) Icons.Default.MicOff else Icons.Default.Mic,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = if (uiState.isQuickMuted || uiState.isMasterMuted) "MUTED" else "MIC ON",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -220,7 +221,7 @@ fun StreamQuickSettingsPanel(
                         Icon(
                             imageVector = Icons.Default.ExpandMore,
                             contentDescription = "Toggle Settings",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.rotate(arrowRotation)
                         )
                     }
@@ -243,7 +244,7 @@ fun StreamQuickSettingsPanel(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF1E1838), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -256,14 +257,14 @@ fun StreamQuickSettingsPanel(
                                 Icon(
                                     imageVector = if (uiState.isCameraAutoFocusEnabled) Icons.Default.CenterFocusStrong else Icons.Default.CenterFocusWeak,
                                     contentDescription = "Camera Focus",
-                                    tint = if (uiState.isCameraAutoFocusEnabled) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                    tint = if (uiState.isCameraAutoFocusEnabled) StudioSuccessGreen else ElegantGoldDim,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Camera Focus Mode",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -271,7 +272,7 @@ fun StreamQuickSettingsPanel(
                                 Text(
                                     text = if (uiState.isCameraAutoFocusEnabled) "Auto-Focus ON" else "Focus Lock (AF-L)",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (uiState.isCameraAutoFocusEnabled) Color(0xFF34D399) else Color(0xFFFBBF24)
+                                    color = if (uiState.isCameraAutoFocusEnabled) StudioSuccessGreen else ElegantGoldDim
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Switch(
@@ -281,8 +282,8 @@ fun StreamQuickSettingsPanel(
                                         .size(36.dp)
                                         .testTag("toggle_camera_focus_switch"),
                                     colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = Color(0xFF10B981)
+                                        checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                                        checkedTrackColor = StudioSuccessGreen
                                     )
                                 )
                             }
@@ -315,11 +316,11 @@ fun StreamQuickSettingsPanel(
                                         }
                                     } else null,
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(0xFF6366F1),
-                                        selectedLabelColor = Color.White,
-                                        selectedLeadingIconColor = Color.White,
-                                        containerColor = Color(0xFF2A244D),
-                                        labelColor = Color.LightGray
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
                                     modifier = Modifier.testTag("camera_focus_chip_${mode.name.lowercase()}")
                                 )
@@ -331,7 +332,7 @@ fun StreamQuickSettingsPanel(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF1E1838), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -344,25 +345,25 @@ fun StreamQuickSettingsPanel(
                                 Icon(
                                     imageVector = Icons.Default.HighQuality,
                                     contentDescription = "Stream Resolution",
-                                    tint = Color(0xFF38BDF8),
+                                    tint = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Stream Quality Resolution",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
                             Surface(
-                                color = Color(0xFF0284C7),
+                                color = MaterialTheme.colorScheme.secondary,
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
                                     text = "${uiState.targetBitrateKbps} Kbps Target",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onSecondary,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -389,16 +390,16 @@ fun StreamQuickSettingsPanel(
                                         Icon(
                                             imageVector = Icons.Default.Hd,
                                             contentDescription = null,
-                                            tint = if (isSelected) Color.White else Color(0xFF38BDF8),
+                                            tint = if (isSelected) MaterialTheme.colorScheme.onSecondary else MaterialTheme.colorScheme.secondary,
                                             modifier = Modifier.size(14.dp)
                                         )
                                     },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = Color(0xFF0284C7),
-                                        selectedLabelColor = Color.White,
-                                        selectedLeadingIconColor = Color.White,
-                                        containerColor = Color(0xFF2A244D),
-                                        labelColor = Color.LightGray
+                                        selectedContainerColor = MaterialTheme.colorScheme.secondary,
+                                        selectedLabelColor = MaterialTheme.colorScheme.onSecondary,
+                                        selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondary,
+                                        containerColor = MaterialTheme.colorScheme.surface,
+                                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant
                                     ),
                                     modifier = Modifier.testTag("stream_resolution_chip_${res.badge.lowercase()}")
                                 )
@@ -410,7 +411,7 @@ fun StreamQuickSettingsPanel(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFF1E1838), RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                             .padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -421,23 +422,23 @@ fun StreamQuickSettingsPanel(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = if (uiState.isQuickMuted || uiState.isMasterMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    imageVector = if (uiState.isQuickMuted || uiState.isMasterMuted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = "Audio Mute",
-                                    tint = if (uiState.isQuickMuted || uiState.isMasterMuted) Color(0xFFEF4444) else Color(0xFF34D399),
+                                    tint = if (uiState.isQuickMuted || uiState.isMasterMuted) MaterialTheme.colorScheme.error else StudioSuccessGreen,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Stream Audio Control",
                                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
                             // Quick Mute Master Toggle Button
                             Surface(
                                 modifier = Modifier.clickable { onToggleAudioMute() }.testTag("quick_mute_audio_button"),
-                                color = if (uiState.isQuickMuted || uiState.isMasterMuted) Color(0xFFDC2626) else Color(0xFF059669),
+                                color = if (uiState.isQuickMuted || uiState.isMasterMuted) MaterialTheme.colorScheme.error else StudioSuccessGreen,
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Row(
@@ -448,13 +449,13 @@ fun StreamQuickSettingsPanel(
                                     Icon(
                                         imageVector = if (uiState.isQuickMuted || uiState.isMasterMuted) Icons.Default.MicOff else Icons.Default.Mic,
                                         contentDescription = null,
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onError,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Text(
                                         text = if (uiState.isQuickMuted || uiState.isMasterMuted) "UNMUTE" else "MUTE ALL",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onError
                                     )
                                 }
                             }
@@ -469,12 +470,12 @@ fun StreamQuickSettingsPanel(
                                 Text(
                                     text = "Master Broadcast Output Level",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = Color.LightGray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     text = "${(uiState.masterVolume * 100).toInt()}%",
                                     style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = Color.White
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
 
@@ -483,9 +484,9 @@ fun StreamQuickSettingsPanel(
                                 onValueChange = { onSetMasterVolume(it) },
                                 valueRange = 0f..1f,
                                 colors = SliderDefaults.colors(
-                                    thumbColor = Color(0xFF10B981),
-                                    activeTrackColor = Color(0xFF059669),
-                                    inactiveTrackColor = Color(0xFF374151)
+                                    thumbColor = StudioSuccessGreen,
+                                    activeTrackColor = StudioSuccessGreen,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.outline
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -506,11 +507,11 @@ fun StreamQuickSettingsPanel(
                                 .weight(1f)
                                 .clickable { onToggleTorch() }
                                 .testTag("quick_toggle_torch_button"),
-                            color = if (uiState.isTorchActive) Color(0xFF312E81) else Color(0xFF1E1838),
+                            color = if (uiState.isTorchActive) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(10.dp),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (uiState.isTorchActive) Color(0xFF818CF8) else Color(0xFF374151)
+                                if (uiState.isTorchActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
                             )
                         ) {
                             Row(
@@ -521,19 +522,19 @@ fun StreamQuickSettingsPanel(
                                 Icon(
                                     imageVector = if (uiState.isTorchActive) Icons.Default.FlashOn else Icons.Default.FlashOff,
                                     contentDescription = "Flashlight Torch",
-                                    tint = if (uiState.isTorchActive) Color(0xFFFBBF24) else Color.Gray,
+                                    tint = if (uiState.isTorchActive) ElegantGoldDim else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Column {
                                     Text(
                                         text = "Camera Torch",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = if (uiState.isTorchActive) "LED ON" else "LED OFF",
                                         fontSize = 10.sp,
-                                        color = if (uiState.isTorchActive) Color(0xFFFBBF24) else Color.Gray
+                                        color = if (uiState.isTorchActive) ElegantGoldDim else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -545,11 +546,11 @@ fun StreamQuickSettingsPanel(
                                 .weight(1f)
                                 .clickable { onToggleTicker() }
                                 .testTag("quick_toggle_ticker_button"),
-                            color = if (uiState.isTickerEnabled) Color(0xFF064E3B) else Color(0xFF1E1838),
+                            color = if (uiState.isTickerEnabled) StudioSuccessGreen.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(10.dp),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (uiState.isTickerEnabled) Color(0xFF34D399) else Color(0xFF374151)
+                                if (uiState.isTickerEnabled) StudioSuccessGreen else MaterialTheme.colorScheme.outline
                             )
                         ) {
                             Row(
@@ -560,19 +561,19 @@ fun StreamQuickSettingsPanel(
                                 Icon(
                                     imageVector = Icons.Default.Subtitles,
                                     contentDescription = "Live Ticker Overlay",
-                                    tint = if (uiState.isTickerEnabled) Color(0xFF34D399) else Color.Gray,
+                                    tint = if (uiState.isTickerEnabled) StudioSuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Column {
                                     Text(
                                         text = "Ticker Overlay",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Text(
                                         text = if (uiState.isTickerEnabled) "ACTIVE" else "HIDDEN",
                                         fontSize = 10.sp,
-                                        color = if (uiState.isTickerEnabled) Color(0xFF34D399) else Color.Gray
+                                        color = if (uiState.isTickerEnabled) StudioSuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }

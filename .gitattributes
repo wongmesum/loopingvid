@@ -1,0 +1,7 @@
+# Ensure the Gradle wrapper Unix script always keeps LF endings so it runs on Linux CI,
+# and the Windows batch script keeps CRLF. The wrapper jar is binary.
+gradlew           text eol=lf
+*.sh              text eol=lf
+gradlew.bat       text eol=crlf
+*.bat             text eol=crlf
+gradle-wrapper.jar binary

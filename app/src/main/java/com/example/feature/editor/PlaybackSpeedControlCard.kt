@@ -30,7 +30,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +82,7 @@ fun PlaybackSpeedControlCard(
     onResetSpeed: () -> Unit,
     baseDurationSec: Double = 15.0,
     queueViewModel: ExportQueueViewModel?,
+    selectedMediaUri: String? = null,
     modifier: Modifier = Modifier
 ) {
     var pitchCorrectionEnabled by remember { mutableStateOf(true) }
@@ -168,7 +169,7 @@ fun PlaybackSpeedControlCard(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // 1. Quick Speed Presets
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -336,7 +337,7 @@ fun PlaybackSpeedControlCard(
                         )
                     }
 
-                    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -431,19 +432,21 @@ fun PlaybackSpeedControlCard(
             // 5. Submit Speed Processing to WorkManager Queue
             Button(
                 onClick = {
-                    if (queueViewModel != null) {
-                        val filterStr = "$vfCommand${if (pitchCorrectionEnabled) ";$afCommand" else ""}"
+                    if (queueViewModel != null && !selectedMediaUri.isNullOrBlank()) {
+                        // Speed is applied by the real playbackSpeed pipeline (setpts + atempo),
+                        // not a raw -vf filter string, so it is correct and audio stays in sync.
                         val request = BatchExportRequest(
                             title = "Speed Retime (%.2fx)".format(currentSpeed),
                             jobType = "SPEED_RETIME",
                             format = "mp4",
                             destinationFolder = "Movies/Retime",
-                            ffmpegFilterString = filterStr
+                            inputUri = selectedMediaUri,
+                            playbackSpeed = currentSpeed
                         )
                         queueViewModel.enqueueProjectExport(request)
                     }
                 },
-                enabled = queueViewModel != null,
+                enabled = queueViewModel != null && !selectedMediaUri.isNullOrBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)

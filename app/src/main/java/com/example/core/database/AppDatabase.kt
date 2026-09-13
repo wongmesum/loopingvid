@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [RenderJobEntity::class, LiveSessionEntity::class, AppSettingEntity::class, JobHistoryEntity::class, EditorAutoSaveEntity::class],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

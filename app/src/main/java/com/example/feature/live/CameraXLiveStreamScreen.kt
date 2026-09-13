@@ -1,16 +1,9 @@
 package com.example.feature.live
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
-import android.view.ViewGroup
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.Camera
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
@@ -31,6 +24,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -77,7 +72,6 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -90,18 +84,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.example.core.utils.RtmpUrlValidator
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 
 /**
  * CameraXLiveStreamScreen integrates CameraX library for live camera feed capture,
@@ -236,8 +226,9 @@ fun CameraXLiveStreamScreen(
                 }
             }
         } else {
-            // Live CameraX Preview Component
+            // Live RTMP camera preview component (RootEncoder OpenGlView)
             CameraXPreviewBox(
+                viewModel = viewModel,
                 uiState = uiState,
                 onMicMuteToggled = { viewModel.toggleMicInputMute() }
             )
@@ -304,109 +295,11 @@ fun CameraXLiveStreamScreen(
  */
 @Composable
 private fun CameraXPreviewBox(
+    viewModel: LiveViewModel,
     uiState: LiveUiState,
     onMicMuteToggled: () -> Unit
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-
-    var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
     var isTorchEnabled by remember { mutableStateOf(false) }
-    var boundCamera by remember { mutableStateOf<Camera?>(null) }
-    var cameraError by remember { mutableStateOf<String?>(null) }
-    var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
-
-    val cameraExecutor: ExecutorService = remember { Executors.newSingleThreadExecutor() }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            try {
-                cameraExecutor.shutdown()
-            } catch (t: Throwable) {
-                t.printStackTrace()
-            }
-        }
-    }
-
-    LaunchedEffect(previewViewRef, lensFacing, isTorchEnabled) {
-        val previewView = previewViewRef ?: return@LaunchedEffect
-        try {
-            val cameraManager = try {
-                context.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
-            } catch (_: Throwable) {
-                null
-            }
-            val cameraIds = try {
-                cameraManager?.cameraIdList
-            } catch (_: Throwable) {
-                null
-            }
-
-            if (cameraIds.isNullOrEmpty()) {
-                cameraError = "Hardware camera sensor not detected or unavailable in emulator context"
-                return@LaunchedEffect
-            }
-
-            val cameraProviderFuture = try {
-                ProcessCameraProvider.getInstance(context)
-            } catch (e: Throwable) {
-                cameraError = "Camera provider initialization error: ${e.localizedMessage}"
-                return@LaunchedEffect
-            }
-
-            cameraProviderFuture.addListener({
-                try {
-                    val cameraProvider = cameraProviderFuture.get()
-                    val preview = Preview.Builder().build().also {
-                        it.setSurfaceProvider(previewView.surfaceProvider)
-                    }
-
-                    val primarySelector = CameraSelector.Builder().requireLensFacing(lensFacing).build()
-                    val fallbackSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-                    val selectorToUse = if (try { cameraProvider.hasCamera(primarySelector) } catch (_: Throwable) { false }) {
-                        primarySelector
-                    } else if (try { cameraProvider.hasCamera(fallbackSelector) } catch (_: Throwable) { false }) {
-                        fallbackSelector
-                    } else if (try { cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA) } catch (_: Throwable) { false }) {
-                        CameraSelector.DEFAULT_FRONT_CAMERA
-                    } else {
-                        null
-                    }
-
-                    if (selectorToUse == null) {
-                        cameraError = "No usable camera lens facing found on device"
-                        return@addListener
-                    }
-
-                    if (!lifecycleOwner.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.CREATED)) {
-                        return@addListener
-                    }
-
-                    try {
-                        cameraProvider.unbindAll()
-                        boundCamera = cameraProvider.bindToLifecycle(
-                            lifecycleOwner,
-                            selectorToUse,
-                            preview
-                        )
-                        boundCamera?.cameraControl?.enableTorch(isTorchEnabled)
-                        cameraError = null
-                    } catch (ise: IllegalStateException) {
-                        cameraError = "Camera lifecycle state changed during navigation"
-                    } catch (t: Throwable) {
-                        cameraError = t.localizedMessage ?: "Camera binding error"
-                    }
-                } catch (t: Throwable) {
-                    t.printStackTrace()
-                    cameraError = t.localizedMessage ?: "Camera hardware unavailable"
-                }
-            }, ContextCompat.getMainExecutor(context))
-        } catch (t: Throwable) {
-            t.printStackTrace()
-            cameraError = t.localizedMessage ?: "Failed to initialize CameraX"
-        }
-    }
 
     Card(
         modifier = Modifier
@@ -417,117 +310,12 @@ private fun CameraXPreviewBox(
         colors = CardDefaults.cardColors(containerColor = Color.Black)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (cameraError != null) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color(0xFF0F172A), Color(0xFF020617))
-                            )
-                        )
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Live animated viewfinder grid overlay
-                    val infiniteTransition = rememberInfiniteTransition()
-                    val phase by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 360f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(4000, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart
-                        )
-                    )
-
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val w = size.width
-                        val h = size.height
-
-                        // Rule of thirds grid lines
-                        drawRect(
-                            color = Color(0x33FFFFFF),
-                            style = Stroke(width = 1.dp.toPx())
-                        )
-                        drawLine(Color(0x22FFFFFF), Offset(w / 3f, 0f), Offset(w / 3f, h), strokeWidth = 1.dp.toPx())
-                        drawLine(Color(0x22FFFFFF), Offset(2 * w / 3f, 0f), Offset(2 * w / 3f, h), strokeWidth = 1.dp.toPx())
-                        drawLine(Color(0x22FFFFFF), Offset(0f, h / 3f), Offset(w, h / 3f), strokeWidth = 1.dp.toPx())
-                        drawLine(Color(0x22FFFFFF), Offset(0f, 2 * h / 3f), Offset(w, 2 * h / 3f), strokeWidth = 1.dp.toPx())
-
-                        // Animated focus crosshair circle
-                        val cx = w / 2f
-                        val cy = h / 2f
-                        val radius = 32.dp.toPx()
-                        drawCircle(
-                            color = Color(0xFF38BDF8).copy(alpha = 0.6f),
-                            radius = radius,
-                            center = Offset(cx, cy),
-                            style = Stroke(width = 1.5.dp.toPx())
-                        )
-                    }
-
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Videocam,
-                            contentDescription = null,
-                            tint = Color(0xFF38BDF8),
-                            modifier = Modifier.size(40.dp)
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "CameraX Live Viewfinder (Emulator Mode)",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Hardware sensor fallback active • 1080p 60fps feed simulated",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.LightGray
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = {
-                                cameraError = null
-                                previewViewRef = null
-                            },
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8))
-                        ) {
-                            Text("Retry Camera Hardware Bind", fontSize = 12.sp, color = Color(0xFF38BDF8))
-                        }
-                    }
-                }
-            } else {
-                AndroidView(
-                    factory = { ctx ->
-                        try {
-                            val cameraManager = ctx.getSystemService(Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
-                            val cameraIds = try { cameraManager?.cameraIdList } catch (_: Throwable) { null }
-                            if (cameraIds.isNullOrEmpty()) {
-                                cameraError = "Hardware camera sensor not detected or unavailable in emulator context"
-                                android.view.View(ctx)
-                            } else {
-                                PreviewView(ctx).apply {
-                                    layoutParams = ViewGroup.LayoutParams(
-                                        ViewGroup.LayoutParams.MATCH_PARENT,
-                                        ViewGroup.LayoutParams.MATCH_PARENT
-                                    )
-                                    scaleType = PreviewView.ScaleType.FILL_CENTER
-                                    previewViewRef = this
-                                }
-                            }
-                        } catch (t: Throwable) {
-                            t.printStackTrace()
-                            cameraError = "Preview view creation error: ${t.localizedMessage}"
-                            android.view.View(ctx)
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            // Real RTMP camera surface (RootEncoder OpenGlView). Displays the live camera feed
+            // and is the source that gets encoded and pushed when broadcasting.
+            RtmpCameraPreview(
+                viewModel = viewModel,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // Top Status Badge Overlay
             Row(
@@ -633,13 +421,7 @@ private fun CameraXPreviewBox(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(
-                    onClick = {
-                        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                            CameraSelector.LENS_FACING_FRONT
-                        } else {
-                            CameraSelector.LENS_FACING_BACK
-                        }
-                    },
+                    onClick = { viewModel.switchStreamCamera() },
                     modifier = Modifier.testTag("switch_camera_lens_button")
                 ) {
                     Icon(
@@ -652,7 +434,7 @@ private fun CameraXPreviewBox(
                 IconButton(
                     onClick = {
                         isTorchEnabled = !isTorchEnabled
-                        boundCamera?.cameraControl?.enableTorch(isTorchEnabled)
+                        viewModel.applyTorchToEngine(isTorchEnabled)
                     },
                     modifier = Modifier.testTag("toggle_torch_button")
                 ) {
@@ -750,6 +532,7 @@ private fun MetricColumn(label: String, value: String, valueColor: Color) {
 /**
  * RTMP Live Streaming Configuration Input Panel.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RtmpStreamConfigCard(
     uiState: LiveUiState,
@@ -779,7 +562,10 @@ private fun RtmpStreamConfigCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Radio,
                         contentDescription = "RTMP Config",
@@ -790,11 +576,14 @@ private fun RtmpStreamConfigCard(
                     Text(
                         text = "RTMP Broadcast Configuration",
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                     )
                 }
 
                 if (isValidRtmp) {
+                    Spacer(modifier = Modifier.width(8.dp))
                     Surface(
                         color = Color(0xFF10B981).copy(alpha = 0.15f),
                         shape = RoundedCornerShape(12.dp)
@@ -803,6 +592,7 @@ private fun RtmpStreamConfigCard(
                             text = "Valid RTMP URL",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = Color(0xFF10B981),
+                            maxLines = 1,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
@@ -816,9 +606,10 @@ private fun RtmpStreamConfigCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Row(
+            FlowRow(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(
                     LivePlatform.YOUTUBE to "YouTube Live",
@@ -891,6 +682,58 @@ private fun RtmpStreamConfigCard(
                     .fillMaxWidth()
                     .testTag("stream_key_input")
             )
+
+            // Real viewer-count configuration. Only YouTube exposes a public concurrent-viewer
+            // API (via the YouTube Data API v3). For TikTok / custom RTMP the count stays hidden.
+            if (uiState.platform == LivePlatform.YOUTUBE) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Real Viewer Count (YouTube Data API)",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "Optional. Enter a YouTube Data API v3 key and the live video ID to show real concurrent viewers.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                OutlinedTextField(
+                    value = uiState.youtubeApiKey,
+                    onValueChange = { viewModel.updateYoutubeApiKey(it) },
+                    label = { Text("YouTube Data API Key") },
+                    placeholder = { Text("AIza...") },
+                    singleLine = true,
+                    visualTransformation = if (isKeyVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("youtube_api_key_input")
+                )
+
+                OutlinedTextField(
+                    value = uiState.youtubeVideoId,
+                    onValueChange = { viewModel.updateYoutubeVideoId(it) },
+                    label = { Text("Live Video ID") },
+                    placeholder = { Text("e.g. dQw4w9WgXcQ") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("youtube_video_id_input")
+                )
+
+                if (uiState.streamStatus == StreamStatus.LIVE) {
+                    val viewerStatus = if (uiState.isViewerCountLive) {
+                        "Live viewers: ${uiState.viewerCount} (peak ${uiState.peakViewerCount})"
+                    } else {
+                        "Viewer count unavailable (check API key / video ID)"
+                    }
+                    Text(
+                        text = viewerStatus,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (uiState.isViewerCountLive) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

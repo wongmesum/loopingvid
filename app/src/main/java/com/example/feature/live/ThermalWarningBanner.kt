@@ -35,13 +35,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.core.utils.ThermalInfo
 import com.example.core.utils.ThermalStatusLevel
+import com.example.ui.theme.ElegantGoldDim
+import com.example.ui.theme.StudioSuccessGreen
 
 /**
  * Thermal Monitoring Component
@@ -60,11 +61,11 @@ fun ThermalWarningBanner(
 
     val levelColor by animateColorAsState(
         targetValue = when (level) {
-            ThermalStatusLevel.CRITICAL -> Color(0xFFEF4444) // Bright Red
-            ThermalStatusLevel.SEVERE -> Color(0xFFDC2626) // Red
-            ThermalStatusLevel.MODERATE -> Color(0xFFF59E0B) // Amber
-            ThermalStatusLevel.WARM -> Color(0xFFEAB308) // Yellow
-            ThermalStatusLevel.NORMAL -> Color(0xFF10B981) // Green
+            ThermalStatusLevel.CRITICAL -> MaterialTheme.colorScheme.error // Bright Red - critical throttling
+            ThermalStatusLevel.SEVERE -> MaterialTheme.colorScheme.error.copy(alpha = 0.85f) // Red - severe heat
+            ThermalStatusLevel.MODERATE -> MaterialTheme.colorScheme.tertiary // Vibrant gold - moderate warning
+            ThermalStatusLevel.WARM -> ElegantGoldDim // Muted gold - warm but not yet a warning
+            ThermalStatusLevel.NORMAL -> StudioSuccessGreen // Green - safe operating temperature
         },
         label = "thermalLevelColor"
     )
@@ -74,7 +75,7 @@ fun ThermalWarningBanner(
             .fillMaxWidth()
             .testTag("thermal_monitoring_card"),
         colors = CardDefaults.cardColors(
-            containerColor = if (level.isWarning) levelColor.copy(alpha = 0.15f) else Color(0xFF161B26)
+            containerColor = if (level.isWarning) levelColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
         ),
         shape = RoundedCornerShape(16.dp),
         border = if (level.isWarning) androidx.compose.foundation.BorderStroke(1.5.dp, levelColor) else null
@@ -103,12 +104,12 @@ fun ThermalWarningBanner(
                         Text(
                             text = "Encoder Thermal Monitor",
                             style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = if (level.isWarning) "High heat load detected" else "Device operating at safe thermal limits",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -163,13 +164,13 @@ fun ThermalWarningBanner(
                             Text(
                                 text = thermalInfo.warningMessage ?: "Device thermal threshold exceeded.",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                                color = Color.White
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             if (thermalInfo.mitigationSuggestion != null) {
                                 Text(
                                     text = thermalInfo.mitigationSuggestion,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.LightGray
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -188,14 +189,14 @@ fun ThermalWarningBanner(
                         Icon(
                             imageVector = Icons.Default.AcUnit,
                             contentDescription = "Cool Down",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onError,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Cool Down Encoder (Lower Bitrate & FPS)",
                             style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onError
                         )
                     }
                 }
@@ -216,14 +217,14 @@ fun ThermalWarningBanner(
                         Icon(
                             imageVector = Icons.Default.LocalFireDepartment,
                             contentDescription = "Simulate Heat Test",
-                            tint = Color.Gray,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "Test Thermal Alert",
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }

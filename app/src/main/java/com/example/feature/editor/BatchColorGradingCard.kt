@@ -33,7 +33,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,14 +69,26 @@ data class LibraryVideoItem(
     val category: String
 )
 
-val DEFAULT_LIBRARY_VIDEOS = listOf(
-    LibraryVideoItem("vid_1", "Loop_Promo_Clip_01.mp4", "0:15", "1080p • 60fps", "content://media/external/video/media/101", "Promo"),
-    LibraryVideoItem("vid_2", "Cinematic_Broll_02.mp4", "0:30", "4K • 24fps", "content://media/external/video/media/102", "B-Roll"),
-    LibraryVideoItem("vid_3", "Vlog_Highlight_03.mp4", "0:45", "1080p • 30fps", "content://media/external/video/media/103", "Vlog"),
-    LibraryVideoItem("vid_4", "Concert_Performance_04.mp4", "0:20", "1080p • 60fps", "content://media/external/video/media/104", "Music"),
-    LibraryVideoItem("vid_5", "Nature_Timelapse_05.mp4", "1:00", "4K • 30fps", "content://media/external/video/media/105", "Nature"),
-    LibraryVideoItem("vid_6", "Urban_Street_06.mp4", "0:25", "1080p • 60fps", "content://media/external/video/media/106", "Urban")
-)
+/**
+ * Reads a display title from a picked video content Uri via MediaStore, falling back to the
+ * last path segment. Kept lightweight (a single cursor query).
+ */
+private fun readVideoDisplayName(context: android.content.Context, uri: android.net.Uri): String {
+    return try {
+        context.contentResolver.query(
+            uri,
+            arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),
+            null, null, null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0) cursor.getString(idx) else null
+            } else null
+        } ?: uri.lastPathSegment ?: "Video"
+    } catch (e: Exception) {
+        uri.lastPathSegment ?: "Video"
+    }
+}
 
 @Composable
 fun BatchColorGradingCard(
@@ -86,7 +98,39 @@ fun BatchColorGradingCard(
     modifier: Modifier = Modifier
 ) {
     var selectedPreset by remember { mutableStateOf(currentConfig.preset) }
-    val selectedVideoIds = remember { mutableStateListOf("vid_1", "vid_2", "vid_3") }
+
+    // Real videos picked by the user from the device (no fake placeholder library).
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val pickedVideos = remember { mutableStateListOf<LibraryVideoItem>() }
+    val selectedVideoIds = remember { mutableStateListOf<String>() }
+
+    val pickVideosLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris ->
+        uris.forEach { uri ->
+            // Persist read access so the batch worker can open the Uri later.
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            } catch (_: Exception) {}
+            val uriStr = uri.toString()
+            if (pickedVideos.none { it.uriStr == uriStr }) {
+                val id = "picked_${uriStr.hashCode()}"
+                pickedVideos.add(
+                    LibraryVideoItem(
+                        id = id,
+                        title = readVideoDisplayName(context, uri),
+                        durationText = "",
+                        resolutionText = "Video",
+                        uriStr = uriStr,
+                        category = "Picked"
+                    )
+                )
+                selectedVideoIds.add(id)
+            }
+        }
+    }
 
     Card(
         modifier = modifier
@@ -150,7 +194,7 @@ fun BatchColorGradingCard(
                 }
             }
 
-            Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
 
             // 1. Target Filter Selector
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -262,7 +306,7 @@ fun BatchColorGradingCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "2. Select Videos from Library (${selectedVideoIds.size}/${DEFAULT_LIBRARY_VIDEOS.size})",
+                        text = "2. Select Videos (${selectedVideoIds.size}/${pickedVideos.size})",
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -270,13 +314,14 @@ fun BatchColorGradingCard(
                     Row {
                         IconButton(
                             onClick = {
-                                if (selectedVideoIds.size == DEFAULT_LIBRARY_VIDEOS.size) {
+                                if (selectedVideoIds.size == pickedVideos.size) {
                                     selectedVideoIds.clear()
                                 } else {
                                     selectedVideoIds.clear()
-                                    selectedVideoIds.addAll(DEFAULT_LIBRARY_VIDEOS.map { it.id })
+                                    selectedVideoIds.addAll(pickedVideos.map { it.id })
                                 }
                             },
+                            enabled = pickedVideos.isNotEmpty(),
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
@@ -289,11 +334,37 @@ fun BatchColorGradingCard(
                     }
                 }
 
+                // Add-videos button (real device picker).
+                OutlinedButton(
+                    onClick = {
+                        pickVideosLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.VideoOnly
+                            )
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("batch_pick_videos_button")
+                ) {
+                    Icon(imageVector = Icons.Default.Movie, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Add Videos from Device")
+                }
+
+                if (pickedVideos.isEmpty()) {
+                    Text(
+                        text = "No videos added yet. Tap \"Add Videos from Device\" to batch-apply this color preset.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
                 Column(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    DEFAULT_LIBRARY_VIDEOS.forEach { video ->
+                    pickedVideos.forEach { video ->
                         val isChecked = selectedVideoIds.contains(video.id)
 
                         Surface(
@@ -360,7 +431,7 @@ fun BatchColorGradingCard(
                 onClick = {
                     if (queueViewModel != null && selectedVideoIds.isNotEmpty()) {
                         val filterStr = currentConfig.copy(preset = selectedPreset).buildFfmpegFilterString()
-                        val selectedVideos = DEFAULT_LIBRARY_VIDEOS.filter { selectedVideoIds.contains(it.id) }
+                        val selectedVideos = pickedVideos.filter { selectedVideoIds.contains(it.id) }
                         
                         val batchRequests = selectedVideos.map { video ->
                             BatchExportRequest(

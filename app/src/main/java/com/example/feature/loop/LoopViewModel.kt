@@ -28,12 +28,16 @@ data class LoopUiState(
     val presetQuality: String = "1080p", // "1080p", "720p", "480p"
     val isPreviewPlaying: Boolean = true,
     val isSeamlessLoopEnabled: Boolean = true,
-    val playbackSpeed: Float = 1.0f,
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
     val loopCount: Int = 0,
     val jobProgress: JobProgressState = JobProgressState(),
-    val lastRenderedOutputUri: String? = null
+    val lastRenderedOutputUri: String? = null,
+    val metadata: com.example.core.media.AudioMetadata = com.example.core.media.AudioMetadata(),
+    // One-time validation error (e.g. "Render" tapped with no video selected). Populated by
+    // guard clauses that previously returned silently; consumed by the global error dialog
+    // in MainScreen so the user actually sees why nothing happened.
+    val validationError: String? = null
 )
 
 class LoopViewModel(
@@ -98,18 +102,6 @@ class LoopViewModel(
                 actionName = if (enabled) "Enable Seamless Loop" else "Disable Seamless Loop",
                 onExecute = { _uiState.value = _uiState.value.copy(isSeamlessLoopEnabled = enabled) },
                 onUndo = { _uiState.value = _uiState.value.copy(isSeamlessLoopEnabled = oldVal) }
-            )
-        )
-    }
-
-    fun setPlaybackSpeed(speed: Float) {
-        val oldVal = _uiState.value.playbackSpeed
-        if (oldVal == speed) return
-        undoRedoManager.executeCommand(
-            LoopCommand(
-                actionName = "Set Speed to %.1fx".format(speed),
-                onExecute = { _uiState.value = _uiState.value.copy(playbackSpeed = speed) },
-                onUndo = { _uiState.value = _uiState.value.copy(playbackSpeed = oldVal) }
             )
         )
     }
@@ -225,6 +217,10 @@ class LoopViewModel(
         commitCrossfadeDurationChange(durationSec)
     }
 
+    fun updateMetadata(metadata: com.example.core.media.AudioMetadata) {
+        _uiState.value = _uiState.value.copy(metadata = metadata)
+    }
+
     fun setPresetQuality(quality: String) {
         val oldVal = _uiState.value.presetQuality
         if (oldVal == quality) return
@@ -239,7 +235,10 @@ class LoopViewModel(
 
     fun startRenderJob(customFileName: String? = null, destinationFolder: String? = null, exportFormat: String = "mp4") {
         val state = _uiState.value
-        val inputUri = state.selectedMediaUri ?: return
+        val inputUri = state.selectedMediaUri ?: run {
+            _uiState.value = state.copy(validationError = "Pilih video terlebih dahulu sebelum memulai render.")
+            return
+        }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -267,4 +266,10 @@ class LoopViewModel(
     fun cancelRenderJob() {
         mediaProcessor.cancelActiveJob()
     }
+
+    /** Clears [LoopUiState.validationError] after the global error dialog has shown it. */
+    fun consumeValidationError() {
+        _uiState.value = _uiState.value.copy(validationError = null)
+    }
+
 }
