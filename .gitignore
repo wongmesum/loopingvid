@@ -22,3 +22,7 @@ debug.keystore
 
 # Scratch build/verification logs (local only)
 /*.log
+
+# Local AI-assistant workspace state and audit notes (not part of the app or its history)
+/.kiro/
+/semantic-review/
